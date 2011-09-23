@@ -102,6 +102,8 @@ typedef struct _param
 
 
 /* get_func/set_func calls for special parameters */
+static void* _get_property(Display *dpy, XDevice *dev, const char *prop_name, int format, Atom type, unsigned long *items);
+static void* _get(Display *dpy, XDevice *dev, const char *prop_name, int prop_offset, int format, Atom type, int items);
 static void map_actions(Display *dpy, XDevice *dev, param_t *param, int argc, char **argv);
 static void set_mode(Display *dpy, XDevice *dev, param_t *param, int argc, char **argv);
 static void get_mode(Display *dpy, XDevice *dev, param_t *param, int argc, char **argv);
@@ -1651,6 +1653,127 @@ out:
 	free(data);
 }
 
+/**
+ * Obtains a property from the server. This function is a wrapper around
+ * XGetDeviceProperty which ensures that a pointer to the entire property
+ * data is returned, as well as verifying it has the expected type and
+ * format. If this function fails for any reason, *items will be zero and
+ * the function will return NULL.
+ *
+ * @param dpy        X11 display to connect to
+ * @param dev        Device to query
+ * @param prop_name  Name of device property
+ * @param format     Format of the property (8/16/32)
+ * @param type       Type of the property
+ * @param items      Number of 'format'-bit items successfully retrieved from the server
+ * @return           Pointer to the requested data. Must be 'free()'-ed
+ */
+static void* _get_property(Display *dpy, XDevice *dev, const char *prop_name,
+                          int format, Atom type, unsigned long *items)
+{
+	int read_format, error;
+	unsigned long read_items, bytes_after;
+	Atom read_prop, read_type;
+	unsigned char *read = NULL;
+	void *data = NULL;
+
+	*items = 0;
+
+	read_prop = XInternAtom(dpy, prop_name, True);
+	if (!read_prop || !test_property(dpy, dev, read_prop))
+	{
+		printf("Property '%s' does not exist on device.\n", prop_name);
+		goto error;
+	}
+
+	do
+	{
+		int offset = *items * format / 8;
+		void *tmp;
+
+		error = XGetDeviceProperty(dpy, dev, read_prop, offset / 4, 1,
+		                            False, AnyPropertyType, &read_type,
+		                            &read_format, &read_items, &bytes_after,
+		                            &read);
+
+		if (error != 0)
+		{
+			fprintf(stderr, "   %-23s = XGetDeviceProperty error %d\n",
+				prop_name, error);
+			XFree(read);
+			goto error;
+		}
+		else if (format != read_format || type != read_type)
+		{
+			fprintf(stderr, "   %-23s = property mismatch: expected type %d, format %d; got type %d, format %d\n",
+			        prop_name, format, type, read_format, read_type);
+			XFree(read);
+			goto error;
+		}
+
+		*items += read_items;
+		tmp = realloc(data, *items * format / 8);
+		if (tmp == NULL)
+		{
+			fprintf(stderr, "Unable to allocate memory.\n");
+			XFree(read);
+			goto error;
+		}
+		else
+		{
+			data = tmp;
+			memcpy(&data[offset], read, read_items * format / 8);
+			XFree(read);
+		}
+	}
+	while (bytes_after > 0);
+	return data;
+
+error:
+	free(data);
+	*items = 0;
+	return NULL;
+}
+
+/**
+ * Obtains sub-values from a specified server property. This function
+ * relies on '_get_property' to verify the type and format match what
+ * is expected. If this function fails for any reason, the function
+ * will return NULL.
+ *
+ * @param dpy          X11 display to connect to
+ * @param dev          Device to query
+ * @param prop_name    Name of device property
+ * @param prop_offset  Offset (in items) to begin reading
+ * @param format       Format of the underlying property (8/16/32)
+ * @param type         Type of the underlying property
+ * @param items        Number of items to read
+ * @return             Pointer to the requested data; must be 'free()'-ed
+ */
+static void* _get(Display *dpy, XDevice *dev, const char *prop_name, int prop_offset,
+                  int format, Atom type, int items)
+{
+	unsigned long read_items;
+	void *read, *data;
+
+	read = _get_property(dpy, dev, prop_name, format, type, &read_items);
+	if (read == NULL)
+		return NULL;
+
+	if (items > prop_offset + read_items)
+	{
+		fprintf(stderr, "   %-23s = count mismatch: expected at least %d got %d\n",
+			prop_name, items, read_items);
+		free(read);
+		return NULL;
+	}
+
+	data = malloc(items * format / 8);
+	memcpy(data, read + (prop_offset * format / 8), items * format / 8);
+	free(read);
+	return data;
+}
+
 static void get_mode(Display *dpy, XDevice *dev, param_t* param, int argc, char **argv)
 {
 	XDeviceInfo *info, *d = NULL;
@@ -1690,10 +1813,7 @@ static void get_mode(Display *dpy, XDevice *dev, param_t* param, int argc, char 
 static void get_rotate(Display *dpy, XDevice *dev, param_t* param, int argc, char **argv)
 {
 	char *rotation = NULL;
-	Atom prop, type;
-	int format;
-	unsigned char* data;
-	unsigned long nitems, bytes_after;
+	char *data;
 
 	if (argc != 0)
 	{
@@ -1701,25 +1821,12 @@ static void get_rotate(Display *dpy, XDevice *dev, param_t* param, int argc, cha
 		return;
 	}
 
-	prop = XInternAtom(dpy, param->prop_name, True);
-	if (!prop)
-	{
-		fprintf(stderr, "Property for '%s' not available.\n",
-			param->name);
-		return;
-	}
-
 	TRACE("Getting rotation for device %ld.\n", dev->device_id);
 
-	XGetDeviceProperty(dpy, dev, prop, 0, 1000, False, AnyPropertyType,
-				&type, &format, &nitems, &bytes_after, &data);
-
-	if (nitems == 0 || format != 8)
-	{
-		fprintf(stderr, "Property for '%s' has no or wrong value - this is a bug.\n",
-			param->name);
+	data = _get(dpy, dev, param->prop_name, param->prop_offset, param->prop_format,
+	            param->prop_type, param->arg_count);
+	if (data == NULL)
 		return;
-	}
 
 	switch(*data)
 	{
@@ -1738,7 +1845,7 @@ static void get_rotate(Display *dpy, XDevice *dev, param_t* param, int argc, cha
 	}
 
 	print_value(param, "%s", rotation);
-
+	free(data);
 	return;
 }
 
@@ -1859,36 +1966,14 @@ static int get_actions(Display *dpy, XDevice *dev,
  */
 static int get_button(Display *dpy, XDevice *dev, param_t *param, int offset)
 {
-	Atom prop, type;
-	int format;
-	unsigned long nitems, bytes_after;
-	unsigned char *data;
+	unsigned char *data = _get(dpy, dev, param->prop_name, offset,
+	                           8, XA_INTEGER, 1);
 
-	prop = XInternAtom(dpy, param->prop_name, True);
-
-	if (!prop)
+	if (data == NULL)
 		return 0;
 
-	XGetDeviceProperty(dpy, dev, prop, 0, 100, False,
-			   AnyPropertyType, &type, &format, &nitems,
-			   &bytes_after, (unsigned char**)&data);
-
-	if (offset >= nitems)
-	{
-		XFree(data);
-		return 0;
-	}
-
-	prop = data[offset];
-	XFree(data);
-
-	if (format != 8 || type != XA_INTEGER || !prop)
-	{
-		return 0;
-	}
-
-	print_value(param, "%d", prop);
-
+	print_value(param, "%d", *data);
+	free(data);
 	return 1;
 }
 
@@ -1905,6 +1990,7 @@ static int get_button(Display *dpy, XDevice *dev, param_t *param, int offset)
  */
 static void get_map(Display *dpy, XDevice *dev, param_t *param, int argc, char** argv)
 {
+	Atom prop;
 	int offset = param->prop_offset;
 
 	TRACE("Getting button map for device %ld.\n", dev->device_id);
@@ -1927,6 +2013,14 @@ static void get_map(Display *dpy, XDevice *dev, param_t *param, int argc, char**
 		offset--;        /* Property is 0-indexed, X buttons are 1-indexed */
 		argc--;          /* Trim off the target button argument */
 		argv = &argv[1]; /*... ditto ...                        */
+	}
+
+	prop = XInternAtom(dpy, param->prop_name, True);
+	if (!prop || !test_property(dpy, dev, prop))
+	{
+		printf("Property '%s' does not exist on device.\n",
+		       param->prop_name);
+		return;
 	}
 
 
@@ -2217,23 +2311,10 @@ static void get(Display *dpy, enum printformat printformat, int argc, char **arg
 
 static void get_param(Display *dpy, XDevice *dev, param_t *param, int argc, char **argv)
 {
-	Atom prop = None, type;
-	int format;
+	Atom prop = None;
 	unsigned char* data;
-	unsigned long nitems, bytes_after;
 	int i;
 	char str[100] = {0};
-
-	if (param->prop_name)
-	{
-		prop = XInternAtom(dpy, param->prop_name, True);
-		if (!prop || !test_property(dpy, dev, prop))
-		{
-			printf("Property '%s' does not exist on device.\n",
-				param->prop_name);
-			return;
-		}
-	}
 
 	if (param->get_func)
 	{
@@ -2242,16 +2323,12 @@ static void get_param(Display *dpy, XDevice *dev, param_t *param, int argc, char
 		return;
 	}
 
+	TRACE("Getting property %s, offset %d\n", param->prop_name, param->prop_offset);
 
-	TRACE("Getting property %ld, offset %d\n", prop, param->prop_offset);
-	XGetDeviceProperty(dpy, dev, prop, 0, 1000, False, AnyPropertyType,
-				&type, &format, &nitems, &bytes_after, &data);
-
-	if (nitems <= param->prop_offset)
-	{
-		fprintf(stderr, "Property offset doesn't exist.\n");
+	data = data = _get(dpy, dev, param->prop_name, param->prop_offset, param->prop_format,
+	                   param->prop_type, param->arg_count);
+	if (data == NULL)
 		return;
-	}
 
 	for (i = 0; i < param->arg_count; i++)
 	{
