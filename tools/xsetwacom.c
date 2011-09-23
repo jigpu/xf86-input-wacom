@@ -2253,13 +2253,19 @@ static void get_param(Display *dpy, XDevice *dev, param_t *param, int argc, char
 		return;
 	}
 
-
-	switch(param->prop_format)
+	for (i = 0; i < param->arg_count; i++)
 	{
-		case 8:
-			for (i = 0; i < param->arg_count; i++)
+		switch (param->prop_type)
+		{
+			case XA_INTEGER:
 			{
-				int val = data[param->prop_offset + i];
+				long val;
+				switch (param->prop_format)
+				{
+					case 8:  val = ((char*)data)[i];  break;
+					case 16: val = ((short*)data)[i]; break;
+					case 32: val = ((long*)data)[i];  break;
+				}
 
 				if (param->prop_flags & PROP_FLAG_BOOLEAN)
 					if (param->prop_flags & PROP_FLAG_INVERTED)
@@ -2268,24 +2274,20 @@ static void get_param(Display *dpy, XDevice *dev, param_t *param, int argc, char
 						sprintf(&str[strlen(str)], "%s", val ?  "on" : "off");
 				else
 					sprintf(&str[strlen(str)], "%d", val);
-
-				if (i < param->arg_count - 1)
-					strcat(str, " ");
+				break;
 			}
-			print_value(param, "%s", str);
-			break;
-		case 32:
-			for (i = 0; i < param->arg_count; i++)
+			case XA_ATOM:
 			{
-				long *ldata = (long*)data;
-				sprintf(&str[strlen(str)], "%ld", ldata[param->prop_offset + i]);
-
-				if (i < param->arg_count - 1)
-					strcat(str, " ");
+				sprintf(&str[strlen(str)], "%s", XGetAtomName(dpy, ((Atom*)data)[i]));
+				break;
 			}
-			print_value(param, "%s", str);
-			break;
+		}
+
+		if (i < param->arg_count - 1)
+			strcat(str, " ");
 	}
+	print_value(param, "%s", str);
+	free(data);
 }
 
 
