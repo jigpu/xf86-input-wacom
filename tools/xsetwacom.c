@@ -454,7 +454,7 @@ static param_t parameters[] =
 		.name = "MapToOutput",
 		.desc = "Map the device to the given output. ",
 		.set_func = set_output,
-		.arg_count = 1,
+		.arg_count = 2,
 		.prop_flags = PROP_FLAG_WRITEONLY | PROP_FLAG_OUTPUT,
 	},
 	{
@@ -2157,6 +2157,108 @@ Bool get_mapped_area(Display *dpy, XDevice *dev, int *width, int *height, int *x
 	return matrix_is_valid;
 }
 
+static Bool shrink(float aspect_ratio, long *width, long *height)
+{
+	if (!isfinite(aspect_ratio))
+		return False;
+	else if (aspect_ratio == 0)
+		return True;
+
+	if ((float)*width / (float)*height > aspect_ratio)
+		*width = *height * aspect_ratio;
+	else
+		*height = *width / aspect_ratio;
+
+	return True;
+}
+
+static Bool rectangle_to_aspect(float aspect_ratio, int rotate, long *x1, long *y1,
+                          long *x2, long *y2)
+{
+	long width  = *x2 - *x1;
+	long height = *y2 - *y1;
+
+	if (rotate == ROTATE_CW || rotate == ROTATE_CCW)
+		aspect_ratio = 1/aspect_ratio;
+
+	shrink(aspect_ratio, &width, &height);
+
+	switch (rotate)
+	{
+		case ROTATE_NONE:
+			*x2 = *x1 + width;
+			*y2 = *y1 + height;
+			break;
+
+		case ROTATE_CW:
+			*x1 = *x2 - width;
+			*y2 = *y1 + height;
+			break;
+
+		case ROTATE_HALF:
+			*x1 = *x2 - width;
+			*y1 = *y2 - height;
+			break;
+
+		case ROTATE_CCW:
+			*x2 = *x1 + width;
+			*y1 = *y2 - height;
+			break;
+
+		default:
+			return False;
+	}
+
+	return True;
+}
+
+/**
+ * Updates device's area property so that it's aspect ratio matches
+ * that of the currently defied output area (if 'do_match' is true),
+ * or to allow use of the entire area (if 'do_match' is false).
+ *
+ * If this function succeeds in modifying the aspect ratio, it returns
+ * 'true'.
+ */
+static Bool _update_aspect(Display *dpy, XDevice *dev, Bool do_match)
+{
+	param_t* area_param = find_parameter("Area");
+	param_t* rotate_param = find_parameter("Rotate");
+	int w, h, x_org, y_org;
+	float aspect;
+	long area[4] = {-1, -1, -1, -1};
+
+	if (!get_mapped_area(dpy, dev, &w, &h, &x_org, &y_org))
+	{
+		fprintf(stderr, "Unable to get the output area.\n");
+		return False;
+	}
+	aspect = (float)w/(float)h;
+
+	_set(dpy, dev, area_param->prop_name, area_param->prop_offset, &area,
+	     area_param->prop_format, XA_INTEGER, area_param->arg_count);
+
+	if (do_match)
+	{
+		long *rotptr  = _get(dpy, dev, rotate_param->prop_name, rotate_param->prop_offset,
+		                     rotate_param->prop_format, XA_INTEGER, rotate_param->arg_count);
+		long *areaptr = _get(dpy, dev, area_param->prop_name, area_param->prop_offset,
+		                     area_param->prop_format, XA_INTEGER, area_param->arg_count);
+
+		if(rectangle_to_aspect(aspect, rotptr[0], &areaptr[0], &areaptr[1], &areaptr[2], &areaptr[3]))
+		{
+			_set(dpy, dev, area_param->prop_name, area_param->prop_offset, areaptr,
+			     area_param->prop_format, XA_INTEGER, area_param->arg_count);
+		}
+
+		return False;
+	}
+	else
+	{
+		return True;
+	}
+}
+
 /**
  * Modifies the server's transformation matrix property for the given
  * device. It takes as input a 9-element array of floats interpreted
@@ -2437,10 +2539,21 @@ static void set_output(Display *dpy, XDevice *dev, param_t *param, int argc, cha
 	unsigned int width, height;
 	int flags = XParseGeometry(argv[0], &x, &y, &width, &height);
 	Bool success = False;
+	Bool do_match;
 
-	if (argc != param->arg_count)
+	if (argc == 0)
 	{
-		fprintf(stderr, "'%s' requires exactly %d value(s).\n", param->name,
+		fprintf(stderr, "'%s' requires at least one argument.\n", param->name);
+		return;
+	}
+	else if (argc == param->arg_count && strcasecmp(argv[1], "KeepShape") != 0)
+	{
+		fprintf(stderr, "'%s' could not understand the provided argument '%s'.\n",
+		        param->name, argv[1]);
+	}
+	else if (argc > param->arg_count)
+	{
+		fprintf(stderr, "'%s' accepts no more than %d value(s).\n", param->name,
 			param->arg_count);
 		return;
 	}
@@ -2457,6 +2570,12 @@ static void set_output(Display *dpy, XDevice *dev, param_t *param, int argc, cha
 		success = set_output_xinerama(dpy, dev, head_no);
 	else
 		fprintf(stderr, "Unable to find an output '%s'.\n", argv[0]);
+
+	if (!success)
+		return;
+
+	do_match = argc > 1 && strcasecmp(argv[1], "KeepShape") == 0;
+	_update_aspect(dpy, dev, do_match);
 }
 
 
