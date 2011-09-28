@@ -86,6 +86,7 @@ typedef struct _param
 	const char *name;	/* param name as specified by the user */
 	const char *desc;	/* description */
 	const char *prop_name;	/* property name */
+	const int prop_type;	/* property type */
 	const int prop_format;	/* property format */
 	const int prop_offset;	/* offset (index) into the property values */
 	const int arg_count;   /* extra number of items after first one */
@@ -120,6 +121,7 @@ static param_t parameters[] =
 		.name = "Area",
 		.desc = "Valid tablet area in device coordinates. ",
 		.prop_name = WACOM_PROP_TABLET_AREA,
+		.prop_type = XA_INTEGER,
 		.prop_format = 32,
 		.prop_offset = 0,
 		.arg_count = 4,
@@ -137,6 +139,7 @@ static param_t parameters[] =
 		.desc = "Level of debugging trace for individual tools "
 		"(default is 0 [off]). ",
 		.prop_name = WACOM_PROP_DEBUGLEVELS,
+		.prop_type = XA_INTEGER,
 		.prop_format = 8,
 		.prop_offset = 0,
 		.arg_count = 1,
@@ -147,6 +150,7 @@ static param_t parameters[] =
 		"code paths between all tools "
 		"associated with the same tablet (default is 0 [off]). ",
 		.prop_name = WACOM_PROP_DEBUGLEVELS,
+		.prop_type = XA_INTEGER,
 		.prop_format = 8,
 		.prop_offset = 1,
 		.arg_count = 1,
@@ -155,6 +159,7 @@ static param_t parameters[] =
 		.name = "Suppress",
 		.desc = "Number of points trimmed (default is 2). ",
 		.prop_name = WACOM_PROP_SAMPLE,
+		.prop_type = XA_INTEGER,
 		.prop_format = 32,
 		.prop_offset = 0,
 		.arg_count = 1,
@@ -164,6 +169,7 @@ static param_t parameters[] =
 		.desc = "Number of raw data used to filter the points "
 		"(default is 4). ",
 		.prop_name = WACOM_PROP_SAMPLE,
+		.prop_type = XA_INTEGER,
 		.prop_format = 32,
 		.prop_offset = 1,
 		.arg_count = 1,
@@ -172,6 +178,7 @@ static param_t parameters[] =
 		.name = "PressureCurve",
 		.desc = "Bezier curve for pressure (default is 0 0 100 100 [linear]). ",
 		.prop_name = WACOM_PROP_PRESSURECURVE,
+		.prop_type = XA_INTEGER,
 		.prop_format = 32,
 		.prop_offset = 0,
 		.arg_count = 4,
@@ -189,6 +196,7 @@ static param_t parameters[] =
 		"(default is off for regular tablets, "
 		"on for Tablet PC). ",
 		.prop_name = WACOM_PROP_HOVER,
+		.prop_type = XA_INTEGER,
 		.prop_format = 8,
 		.prop_offset = 0,
 		.arg_count = 1,
@@ -198,6 +206,7 @@ static param_t parameters[] =
 		.name = "Touch",
 		.desc = "Turns on/off Touch events (default is on). ",
 		.prop_name = WACOM_PROP_TOUCH,
+		.prop_type = XA_INTEGER,
 		.prop_format = 8,
 		.prop_offset = 0,
 		.arg_count = 1,
@@ -208,6 +217,7 @@ static param_t parameters[] =
 		.desc = "Turns on/off multi-touch gesture events "
 		"(default is on). ",
 		.prop_name = WACOM_PROP_ENABLE_GESTURE,
+		.prop_type = XA_INTEGER,
 		.prop_format = 8,
 		.prop_offset = 0,
 		.arg_count = 1,
@@ -218,6 +228,7 @@ static param_t parameters[] =
 		.desc = "Minimum distance for a zoom gesture "
 		"(default is 50). ",
 		.prop_name = WACOM_PROP_GESTURE_PARAMETERS,
+		.prop_type = XA_INTEGER,
 		.prop_format = 32,
 		.prop_offset = 0,
 		.arg_count = 1,
@@ -227,6 +238,7 @@ static param_t parameters[] =
 		.desc = "Minimum motion before sending a scroll gesture "
 		"(default is 20). ",
 		.prop_name = WACOM_PROP_GESTURE_PARAMETERS,
+		.prop_type = XA_INTEGER,
 		.prop_format = 32,
 		.prop_offset = 1,
 		.arg_count = 1,
@@ -236,6 +248,7 @@ static param_t parameters[] =
 		.desc = "Minimum time between taps for a right click "
 		"(default is 250). ",
 		.prop_name = WACOM_PROP_GESTURE_PARAMETERS,
+		.prop_type = XA_INTEGER,
 		.prop_format = 32,
 		.prop_offset = 2,
 		.arg_count = 1,
@@ -247,6 +260,7 @@ static param_t parameters[] =
 		"(default is 10 for Intuos series, "
 		"42 for Graphire series). ",
 		.prop_name = WACOM_PROP_PROXIMITY_THRESHOLD,
+		.prop_type = XA_INTEGER,
 		.prop_format = 32,
 		.prop_offset = 0,
 		.arg_count = 1,
@@ -256,6 +270,9 @@ static param_t parameters[] =
 		.desc = "Sets the rotation of the tablet. "
 		"Values = none, cw, ccw, half (default is none). ",
 		.prop_name = WACOM_PROP_ROTATION,
+		.prop_type = XA_INTEGER,
+		.prop_format = 8,
+		.prop_offset = 0,
 		.set_func = set_rotate,
 		.get_func = get_rotate,
 		.arg_count = 1,
@@ -365,6 +382,7 @@ static param_t parameters[] =
 		.desc = "Sets tip/eraser pressure threshold "
 		"(default is 27). ",
 		.prop_name = WACOM_PROP_PRESSURE_THRESHOLD,
+		.prop_type = XA_INTEGER,
 		.prop_format = 32,
 		.prop_offset = 0,
 		.arg_count = 1,
@@ -373,6 +391,7 @@ static param_t parameters[] =
 		.name = "ResetArea",
 		.desc = "Resets the bounding coordinates to default in tablet units. ",
 		.prop_name = WACOM_PROP_TABLET_AREA,
+		.prop_type = XA_INTEGER,
 		.prop_format = 32,
 		.prop_offset = 0,
 		.arg_count = 0,
@@ -383,6 +402,7 @@ static param_t parameters[] =
 		.name = "ToolID",
 		.desc = "Returns the ID of the associated device. ",
 		.prop_name = WACOM_PROP_TOOL_TYPE,
+		.prop_type = XA_ATOM,
 		.prop_format = 32,
 		.prop_offset = 0,
 		.arg_count = 1,
@@ -392,6 +412,7 @@ static param_t parameters[] =
 		.name = "ToolSerial",
 		.desc = "Returns the serial number of the current device in proximity.",
 		.prop_name = WACOM_PROP_SERIALIDS,
+		.prop_type = XA_INTEGER,
 		.prop_format = 32,
 		.prop_offset = 3,
 		.arg_count = 1,
@@ -401,6 +422,7 @@ static param_t parameters[] =
 		.name = "ToolSerialPrevious",
 		.desc = "Returns the serial number of the previous device in proximity.",
 		.prop_name = WACOM_PROP_SERIALIDS,
+		.prop_type = XA_INTEGER,
 		.prop_format = 32,
 		.prop_offset = 1,
 		.arg_count = 1,
@@ -410,6 +432,7 @@ static param_t parameters[] =
 		.name = "BindToSerial",
 		.desc = "Binds this device to the serial number.",
 		.prop_name = WACOM_PROP_SERIAL_BIND,
+		.prop_type = XA_INTEGER,
 		.prop_format = 32,
 		.prop_offset = 0,
 		.arg_count = 1,
@@ -418,6 +441,7 @@ static param_t parameters[] =
 		.name = "TabletID",
 		.desc = "Returns the tablet ID of the associated device. ",
 		.prop_name = WACOM_PROP_SERIALIDS,
+		.prop_type = XA_INTEGER,
 		.prop_format = 32,
 		.prop_offset = 0,
 		.arg_count = 1,
@@ -2470,13 +2494,19 @@ static void get_param(Display *dpy, XDevice *dev, param_t *param, int argc, char
 		return;
 	}
 
-
-	switch(param->prop_format)
+	for (i = 0; i < param->arg_count; i++)
 	{
-		case 8:
-			for (i = 0; i < param->arg_count; i++)
+		switch (param->prop_type)
+		{
+			case XA_INTEGER:
 			{
-				int val = data[param->prop_offset + i];
+				long val;
+				switch (param->prop_format)
+				{
+					case 8:  val = ((char*)data)[i];  break;
+					case 16: val = ((short*)data)[i]; break;
+					case 32: val = ((long*)data)[i];  break;
+				}
 
 				if (param->prop_flags & PROP_FLAG_BOOLEAN)
 					if (param->prop_flags & PROP_FLAG_INVERTED)
@@ -2485,24 +2515,20 @@ static void get_param(Display *dpy, XDevice *dev, param_t *param, int argc, char
 						sprintf(&str[strlen(str)], "%s", val ?  "on" : "off");
 				else
 					sprintf(&str[strlen(str)], "%d", val);
-
-				if (i < param->arg_count - 1)
-					strcat(str, " ");
+				break;
 			}
-			print_value(param, "%s", str);
-			break;
-		case 32:
-			for (i = 0; i < param->arg_count; i++)
+			case XA_ATOM:
 			{
-				long *ldata = (long*)data;
-				sprintf(&str[strlen(str)], "%ld", ldata[param->prop_offset + i]);
-
-				if (i < param->arg_count - 1)
-					strcat(str, " ");
+				sprintf(&str[strlen(str)], "%s", XGetAtomName(dpy, ((Atom*)data)[i]));
+				break;
 			}
-			print_value(param, "%s", str);
-			break;
+		}
+
+		if (i < param->arg_count - 1)
+			strcat(str, " ");
 	}
+	print_value(param, "%s", str);
+	free(data);
 }
 
 
