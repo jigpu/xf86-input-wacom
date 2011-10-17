@@ -156,7 +156,8 @@ static unsigned short padkey_codes [] = {
 	BTN_A, BTN_B, BTN_C, BTN_X, BTN_Y, BTN_Z,
 	BTN_BASE, BTN_BASE2, BTN_BASE3,
 	BTN_BASE4, BTN_BASE5, BTN_BASE6,
-	BTN_TL, BTN_TR, BTN_TL2, BTN_TR2, BTN_SELECT
+	BTN_TL, BTN_TR, BTN_TL2, BTN_TR2, BTN_SELECT,
+	KEY_PROG1, KEY_PROG2, KEY_PROG3
 };
 
 /* Fixed mapped stylus and mouse buttons */
