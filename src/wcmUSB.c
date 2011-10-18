@@ -29,6 +29,7 @@
 #include <linux/version.h>
 
 #define MAX_USB_EVENTS 32
+#define ABS_WHEEL2 (ABS_TOOL_WIDTH + 1)
 
 typedef struct {
 	int wcmLastToolSerial;
@@ -1041,7 +1042,7 @@ static int usbParseAbsEvent(WacomCommonPtr common,
 		case ABS_WHEEL:
 			ds->abswheel = event->value;
 			break;
-		case ABS_RUDDER:
+		case ABS_WHEEL2:
 			ds->abswheel2 = event->value;
 			break;
 		case ABS_Z:
