@@ -442,6 +442,8 @@ struct _WacomCommonRec
 
 	int wcmMaxStripX;            /* Maximum fingerstrip X */
 	int wcmMaxStripY;            /* Maximum fingerstrip Y */
+	int wcmMaxRing;             /* Maximum touch ring (left) */
+	int wcmMaxRing2;            /* Maximum touch ring (right) */
 
 	int nbuttons;                /* total number of buttons */
 	int padkey_code[WCM_MAX_BUTTONS];/* hardware codes for buttons */

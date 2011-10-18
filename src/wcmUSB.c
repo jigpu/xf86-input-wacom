@@ -570,6 +570,18 @@ int usbWcmGetRanges(InputInfoPtr pInfo)
 			common->wcmMaxStripY = absinfo.maximum;
 	}
 
+	/* max 2nd touchring value */
+	if (ISBITSET(abs, ABS_WHEEL) &&
+			!ioctl(pInfo->fd, EVIOCGABS(ABS_WHEEL), &absinfo))
+	{
+		common->wcmMaxRing = MAX_PAD_RING;
+	}
+
+	/* max 2nd touchring value */
+	if (ISBITSET(abs, ABS_RUDDER) &&
+			!ioctl(pInfo->fd, EVIOCGABS(ABS_RUDDER), &absinfo))
+		common->wcmMaxRing2 = absinfo.maximum;
+
 	/* max z cannot be configured */
 	if (ISBITSET(abs, ABS_PRESSURE) &&
 			!ioctl(pInfo->fd, EVIOCGABS(ABS_PRESSURE), &absinfo))
