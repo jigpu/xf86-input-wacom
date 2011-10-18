@@ -86,7 +86,7 @@ static int wcmAllocate(InputInfoPtr pInfo)
 	priv->stripldn = 5;			/* Default left strip down event */
 	priv->striprup = 4;			/* Default right strip up event */
 	priv->striprdn = 5;			/* Default right strip down event */
-	priv->naxes = 6;			/* Default number of axes */
+	priv->naxes = 7;			/* Default number of axes */
 
 	/* JEJ - throttle sampling code */
 	priv->throttleLimit = -1;

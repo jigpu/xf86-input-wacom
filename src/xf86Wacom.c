@@ -322,6 +322,35 @@ wcmInitAxes(DeviceIntPtr pWcm)
 #endif
 			       );
 
+	/* seventh valuator: abswheel2 */
+	if ((TabletHasFeature(common, WCM_DUALRING)) && IsPad(priv))
+	{
+		/* Second touch ring */
+		label = None;
+		min = MIN_PAD_RING;
+		max = MAX_PAD_RING;
+		min_res = max_res = res = 1;
+		mode = Absolute;
+	}
+	else
+	{
+		label = None; /* XXX: what is this axis? */
+		min = 0;
+		max = 1; /* dummy value */
+		min_res = max_res = res = 1;
+		mode = Absolute;
+	}
+
+	InitValuatorAxisStruct(pInfo->dev, 6,
+#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 7
+			       label,
+#endif
+			       min, max, res, min_res, max_res
+#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 12
+			       , mode
+#endif
+			       );
+
 	return TRUE;
 }
 
@@ -404,8 +433,8 @@ static int wcmDevInit(DeviceIntPtr pWcm)
 			return FALSE;
 	}
 
-	if (!nbaxes || nbaxes > 6)
-		nbaxes = priv->naxes = 6;
+	if (!nbaxes || nbaxes > 7)
+		nbaxes = priv->naxes = 7;
 
 	/* axis_labels is just zeros, we set up each valuator with the
 	 * correct property later */
