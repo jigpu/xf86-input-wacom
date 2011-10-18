@@ -30,6 +30,10 @@
 
 #define MAX_USB_EVENTS 32
 
+#ifndef ABS_WHEEL2
+#define ABS_WHEEL2 0x1d
+#endif
+
 typedef struct {
 	int wcmLastToolSerial;
 	int wcmBTNChannel;
@@ -1040,6 +1044,9 @@ static int usbParseAbsEvent(WacomCommonPtr common,
 			break;
 		case ABS_WHEEL:
 			ds->abswheel = event->value;
+			break;
+		case ABS_WHEEL2:
+			ds->abswheel2 = event->value;
 			break;
 		case ABS_Z:
 			ds->abswheel = event->value;
