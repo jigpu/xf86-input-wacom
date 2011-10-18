@@ -349,9 +349,9 @@ static int getWheelButton(InputInfoPtr pInfo, const WacomDeviceState* ds,
 		 * larger than the oldvalue..value considering the
 		 * wraparound, assume wraparound and readjust */
 		if (value < 0)
-			wrap_delta = ((MAX_PAD_RING + 1) + priv->oldWheel) - ds->abswheel;
+			wrap_delta = ((priv->common->wcmMaxRing + 1) + priv->oldWheel) - ds->abswheel;
 		else
-			wrap_delta = priv->oldWheel - ((MAX_PAD_RING + 1) + ds->abswheel);
+			wrap_delta = priv->oldWheel - ((priv->common->wcmMaxRing + 1) + ds->abswheel);
 
 		DBG(12, priv, "wrap detection for %d (old %d): %d (wrap %d)\n",
 		    ds->abswheel, priv->oldWheel, value, wrap_delta);
@@ -374,9 +374,9 @@ static int getWheelButton(InputInfoPtr pInfo, const WacomDeviceState* ds,
 		 * larger than the oldvalue..value considering the
 		 * wraparound, assume wraparound and readjust */
 		if (value < 0)
-			wrap_delta = ((MAX_PAD_RING + 1) + priv->oldWheel2) - ds->abswheel2;
+			wrap_delta = ((priv->common->wcmMaxRing2 + 1) + priv->oldWheel2) - ds->abswheel2;
 		else
-			wrap_delta = priv->oldWheel2 - ((MAX_PAD_RING + 1) + ds->abswheel2);
+			wrap_delta = priv->oldWheel2 - ((priv->common->wcmMaxRing2 + 1) + ds->abswheel2);
 
 		DBG(12, priv, "wrap detection for %d (old %d): %d (wrap %d)\n",
 		    ds->abswheel2, priv->oldWheel2, value, wrap_delta);
@@ -785,8 +785,8 @@ void wcmSendEvents(InputInfoPtr pInfo, const WacomDeviceState* ds)
 	else
 	{
 		priv->oldButtons = 0;
-		priv->oldWheel = MAX_PAD_RING + 1;
-		priv->oldWheel2 = MAX_PAD_RING + 1;
+		priv->oldWheel = priv->common->wcmMaxRing + 1;
+		priv->oldWheel2 = priv->common->wcmMaxRing2 + 1;
 		priv->oldX = 0;
 		priv->oldY = 0;
 		priv->oldZ = 0;
