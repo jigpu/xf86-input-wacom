@@ -1041,6 +1041,9 @@ static int usbParseAbsEvent(WacomCommonPtr common,
 		case ABS_WHEEL:
 			ds->abswheel = event->value;
 			break;
+		case ABS_RUDDER:
+			ds->abswheel2 = event->value;
+			break;
 		case ABS_Z:
 			ds->abswheel = event->value;
 			break;
