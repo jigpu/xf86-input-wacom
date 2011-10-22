@@ -363,6 +363,31 @@ static int getWheelButton(InputInfoPtr pInfo, const WacomDeviceState* ds,
 		*fakeKey = (value > 0) ? priv->wheel_keys[2+1] : priv->wheel_keys[3+1];
 	}
 
+	/* emulate events for 2nd absolute wheel when it is a touch ring (on pad) */
+	if ( (ds->abswheel2 != priv->oldWheel2) && IsPad(priv) &&
+	    (priv->oldProximity == ds->proximity))
+	{
+		int wrap_delta;
+		value = priv->oldWheel2 - ds->abswheel2;
+
+		/* Wraparound detection. If the distance oldvalue..value is
+		 * larger than the oldvalue..value considering the
+		 * wraparound, assume wraparound and readjust */
+		if (value < 0)
+			wrap_delta = ((MAX_PAD_RING + 1) + priv->oldWheel2) - ds->abswheel2;
+		else
+			wrap_delta = priv->oldWheel2 - ((MAX_PAD_RING + 1) + ds->abswheel2);
+
+		DBG(12, priv, "wrap detection for %d (old %d): %d (wrap %d)\n",
+		    ds->abswheel2, priv->oldWheel2, value, wrap_delta);
+
+		if (abs(wrap_delta) < abs(value))
+			value = wrap_delta;
+
+		fakeButton = (value > 0) ? priv->wheel2up : priv->wheel2dn;
+		*fakeKey = (value > 0) ? priv->wheel_keys[4+1] : priv->wheel_keys[5+1];
+	}
+
 	/* emulate events for left strip */
 	if ( ds->stripx != priv->oldStripX )
 	{
@@ -439,7 +464,7 @@ static void sendCommonEvents(InputInfoPtr pInfo, const WacomDeviceState* ds,
 		wcmSendButtons(pInfo,buttons, first_val, num_vals, valuators);
 
 	/* emulate wheel/strip events when defined */
-	if ( ds->relwheel || (ds->abswheel != priv->oldWheel) ||
+	if ( ds->relwheel || (ds->abswheel != priv->oldWheel) || (ds->abswheel2 != priv->oldWheel2) ||
 		( (ds->stripx - priv->oldStripX) && ds->stripx && priv->oldStripX) || 
 			((ds->stripy - priv->oldStripY) && ds->stripy && priv->oldStripY) )
 		sendWheelStripEvents(pInfo, ds, first_val, num_vals, valuators);
@@ -540,7 +565,7 @@ wcmSendPadEvents(InputInfoPtr pInfo, const WacomDeviceState* ds,
 		if (valuators[i])
 			break;
 	if (i < num_vals || ds->buttons || ds->relwheel ||
-	    (ds->abswheel != priv->oldWheel))
+	    (ds->abswheel != priv->oldWheel) || (ds->abswheel2 != priv->oldWheel2))
 	{
 		sendCommonEvents(pInfo, ds, first_val, num_vals, valuators);
 

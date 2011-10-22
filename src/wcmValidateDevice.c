@@ -713,8 +713,8 @@ Bool wcmParseOptions(InputInfoPtr pInfo, Bool is_primary, Bool is_dependent)
 	 */
 	if (IsPad(priv))
 	{
-		priv->wheelup = 4;
-		priv->wheeldn = 5;
+		priv->wheelup = priv->wheel2up = 4;
+		priv->wheeldn = priv->wheel2dn = 5;
 		set_absolute(pInfo, TRUE);
 	}
 
