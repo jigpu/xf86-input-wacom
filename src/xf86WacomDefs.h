@@ -164,6 +164,7 @@ struct _WacomModel
 							  button handling,
 							  always an LCD) */
 #define WCM_PENTOUCH		0x00000400 /* Tablet supports pen and touch */
+#define WCM_DUALRING		0x00000800 /* Tablet has two touch rings */
 #define TabletHasFeature(common, feature) (((common)->tablet_type & (feature)) != 0)
 #define TabletSetFeature(common, feature) ((common)->tablet_type |= (feature))
 
