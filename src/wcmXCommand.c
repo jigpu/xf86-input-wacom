@@ -368,23 +368,21 @@ static int wcmSetActionProperties(DeviceIntPtr dev, Atom property,
 		}
 	} else
 	{
-		i = wcmFindProp(property, priv->wheel_actions,
-					ARRAY_SIZE(priv->wheel_actions));
+		i = wcmFindProp(property, priv->scroll_actions, 4);
 		if (i >= 0) {
 			if (!checkonly)
 			{
 				XIGetDeviceProperty(dev, prop_wheel_buttons, &prop);
 				wcmUpdateButtonKeyActions(dev, prop,
-						priv->wheel_keys,
-						ARRAY_SIZE(priv->wheel_keys));
+						priv->scroll_keys+4, 6);
 			}
 		} else
 		{
-			i = wcmFindProp(property, priv->strip_actions, ARRAY_SIZE(priv->strip_actions));
+			i = wcmFindProp(property, priv->scroll_actions+4, 6);
 			if (i >= 0 && !checkonly)
 			{
 				XIGetDeviceProperty(dev, prop_strip_buttons, &prop);
-				wcmUpdateButtonKeyActions(dev, prop, priv->strip_keys, ARRAY_SIZE(priv->strip_keys));
+				wcmUpdateButtonKeyActions(dev, prop, priv->scroll_keys, 4);
 			}
 		}
 	}
@@ -547,8 +545,8 @@ static int wcmSetWheelProperty(DeviceIntPtr dev, Atom property,
 		.up3 = &priv->wheel2up,
 		.dn3 = &priv->wheel2dn,
 
-		.handlers = priv->wheel_actions,
-		.keys	  = priv->wheel_keys,
+		.handlers = priv->scroll_actions,
+		.keys	  = priv->scroll_keys+4,
 		.skeys    = 6,
 	};
 
@@ -569,8 +567,8 @@ static int wcmSetStripProperty(DeviceIntPtr dev, Atom property,
 		.up3 = NULL,
 		.dn3 = NULL,
 
-		.handlers = priv->strip_actions,
-		.keys	  = priv->strip_keys,
+		.handlers = priv->scroll_actions,
+		.keys	  = priv->scroll_keys,
 		.skeys    = 4,
 	};
 
@@ -616,11 +614,8 @@ int wcmDeleteProperty(DeviceIntPtr dev, Atom property)
 
 	i = wcmFindProp(property, priv->btn_actions, ARRAY_SIZE(priv->btn_actions));
 	if (i < 0)
-		i = wcmFindProp(property, priv->wheel_actions,
-				ARRAY_SIZE(priv->wheel_actions));
-	if (i < 0)
-		i = wcmFindProp(property, priv->strip_actions,
-				ARRAY_SIZE(priv->strip_actions));
+		i = wcmFindProp(property, priv->scroll_actions,
+				ARRAY_SIZE(priv->scroll_actions));
 
 	return (i >= 0) ? BadAccess : Success;
 }
