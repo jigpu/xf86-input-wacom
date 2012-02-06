@@ -232,12 +232,12 @@ void InitWcmDeviceProperties(InputInfoPtr pInfo)
 	memset(values, 0, sizeof(values));
 	prop_btnactions = InitWcmAtom(pInfo->dev, WACOM_PROP_BUTTON_ACTIONS, XA_ATOM, 32, nbuttons, values);
 
-	if (IsPad(priv)) {
+	if (IsPad(priv) && TabletHasFeature(common, WCM_STRIP)) {
 		memset(values, 0, sizeof(values));
 		prop_strip_buttons = InitWcmAtom(pInfo->dev, WACOM_PROP_STRIPBUTTONS, XA_ATOM, 32, 4, values);
 	}
 
-	if (IsPad(priv) || IsCursor(priv))
+	if ((IsPad(priv) && TabletHasFeature(common, WCM_RING)) || IsCursor(priv))
 	{
 		memset(values, 0, sizeof(values));
 		prop_wheel_buttons = InitWcmAtom(pInfo->dev, WACOM_PROP_WHEELBUTTONS, XA_ATOM, 32, 6, values);
@@ -849,7 +849,8 @@ int wcmSetProperty(DeviceIntPtr dev, Atom property, XIPropertyValuePtr prop,
 #endif
 	} else if (property == prop_btnactions)
 	{
-		if (prop->size != WCM_MAX_BUTTONS)
+		nbuttons = min(max(priv->nbuttons + 4, 7), WCM_MAX_BUTTONS);
+		if (prop->size != nbuttons)
 			return BadMatch;
 		wcmSetPropertyButtonActions(dev, property, prop, checkonly);
 	} else
