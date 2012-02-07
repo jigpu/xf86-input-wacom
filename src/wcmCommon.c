@@ -312,11 +312,9 @@ static void sendDefinedAction(InputInfoPtr pInfo, int type, int number,
 	{
 		if (action->type == type && action->number == number)
 		{
-			if (delta > 0)
-				btn_action = action->up;
-			else if (delta < 0)
-				btn_action = action->down;
-
+			if ((delta > 0 && action->positive) ||
+			    (delta < 0 && !action->positive))
+				btn_action = action->action;
 			break;
 		}
 		action = action->next;
