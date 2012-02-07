@@ -254,23 +254,6 @@ void InitWcmDeviceProperties(InputInfoPtr pInfo)
 #endif
 }
 
-/* Returns the offset of the property in the list given. If the property is
- * not found, a negative error code is returned. */
-static int wcmFindProp(Atom property, Atom *prop_list, int nprops)
-{
-	int i;
-
-	/* check all properties used for button actions */
-	for (i = 0; i < nprops; i++)
-		if (prop_list[i] == property)
-			break;
-
-	if (i >= nprops)
-		return -BadAtom;
-
-	return i;
-}
-
 static int wcmSanityCheckProperty(XIPropertyValuePtr prop)
 {
 	CARD32 *data;
@@ -320,29 +303,103 @@ static void wcmUpdateActionPropHandlers(XIPropertyValuePtr prop, Atom *handlers)
 		handlers[i] = values[i];
 }
 
-static void wcmUpdateButtonKeyActions(DeviceIntPtr dev, XIPropertyValuePtr prop,
-					unsigned int (*keys)[256], int skeys)
+/**
+ * Removes the reference to given given WacomActionPtr from the
+ * action stack (if it exists). It should be safe to free the
+ * pointer afterwards.
+ */
+static void wcmUnrefAction(DeviceIntPtr dev, WacomActionPtr ptr)
 {
-	Atom *values = (Atom*)prop->data;
-	XIPropertyValuePtr val;
-	int i, j;
+	InputInfoPtr pInfo = (InputInfoPtr) dev->public.devicePrivate;
+	WacomDevicePtr priv = (WacomDevicePtr) pInfo->private;
+	WacomActionPtr action = priv->actions, backref = NULL;
 
-	for (i = 0; i < prop->size; i++)
+	while (action != NULL && action != ptr)
 	{
-		/* keys is one based array to align with X buttons */
-		memset(keys[i+1], 0, sizeof(keys[i+1]));
-
-		if (!values[i])
-			continue;
-
-		XIGetDeviceProperty(dev, values[i], &val);
-
-		for (j = 0; j < val->size; j++)
-			keys[i+1][j] = ((unsigned int*)val->data)[j];
+		backref = action;
+		action = action->next;
 	}
+
+	if (action == NULL)
+		return;
+
+	if (backref != NULL)
+		backref->next = action->next;
+	else
+		priv->actions = action->next;
 }
 
-/* Change the properties that hold the actual button actions */
+/**
+ * Creates a new action that can be pushed
+ */
+static WacomActionPtr wcmConstructAction(DeviceIntPtr dev, Atom source, int type, int number, Bool positive)
+{
+	WacomActionPtr action;
+	XIPropertyValuePtr val;
+	int i;
+
+	XIGetDeviceProperty(dev, source, &val);
+	if (wcmSanityCheckProperty(source) != Success)
+		return NULL;
+
+	action = calloc(1, sizeof(WacomAction));
+	if (action == NULL)
+		return NULL; /* ERROR: Out of memory! */
+
+	action->atom = source;
+	action->number = number;
+	action->positive = positive;
+	action->type = type;
+
+	/* keys is one based array to align with X buttons */
+	memset(action->action, 0, sizeof(action->action));
+	for (i = 0; i < val->size; i++)
+		action->action[i] = ((unsigned int*)val->data)[i];
+
+	return action;
+}
+
+/**
+ * Sets an action in the stack using an existing Action as a template.
+ */
+static int wcmUpdateAction(DeviceIntPtr dev, Atom source)
+{
+	InputInfoPtr pInfo = (InputInfoPtr) dev->public.devicePrivate;
+	WacomDevicePtr priv = (WacomDevicePtr) pInfo->private;
+	WacomActionPtr action = priv->actions, new_action = NULL;
+	int type, number;
+	Bool positive, found=FALSE;
+
+	while (action != NULL)
+	{
+		WacomDevicePtr next = action->next;
+		if (action->atom == source)
+		{
+			found = TRUE;
+			type = action->type;
+			number = action->number;
+			positive = action->positive;
+			wcmUnrefAction(action);
+			free(action);
+		}
+		action = next;
+	}
+
+	if (found == FALSE)
+		return -BadAtom; /* ERROR: No template action exists! */
+
+	new_action = wcmConstructAction(dev, source, action->type,
+	                                action->number, action->positive);
+
+	new_action->next = priv->actions;
+	priv->actions = action;
+}
+
+/**
+ *  Change the properties that hold the actual button actions.
+ *  This function requires that an action with the same Atom already
+ *  exists in the aciton stack.
+ */
 static int wcmSetActionProperties(DeviceIntPtr dev, Atom property,
 				  XIPropertyValuePtr prop, BOOL checkonly)
 {
@@ -351,43 +408,12 @@ static int wcmSetActionProperties(DeviceIntPtr dev, Atom property,
 	int i;
 	int rc;
 
-
 	DBG(10, priv, "\n");
 
-	rc = wcmSanityCheckProperty(prop);
-	if (rc != Success)
-		return rc;
-
-	i = wcmFindProp(property, priv->btn_actions, ARRAY_SIZE(priv->btn_actions));
-	if (i >= 0)
-	{
-		if (!checkonly)
-		{
-			XIGetDeviceProperty(dev, prop_btnactions, &prop);
-			wcmUpdateButtonKeyActions(dev, prop, priv->keys, ARRAY_SIZE(priv->keys));
-		}
-	} else
-	{
-		i = wcmFindProp(property, priv->scroll_actions, 4);
-		if (i >= 0) {
-			if (!checkonly)
-			{
-				XIGetDeviceProperty(dev, prop_wheel_buttons, &prop);
-				wcmUpdateButtonKeyActions(dev, prop,
-						priv->scroll_keys+4, 6);
-			}
-		} else
-		{
-			i = wcmFindProp(property, priv->scroll_actions+4, 6);
-			if (i >= 0 && !checkonly)
-			{
-				XIGetDeviceProperty(dev, prop_strip_buttons, &prop);
-				wcmUpdateButtonKeyActions(dev, prop, priv->scroll_keys, 4);
-			}
-		}
-	}
-
-	return abs(i);
+	if (!checkonly)
+		return wcmUpdateAction(dev, property);
+	else
+		return Success;
 }
 
 static int wcmCheckActionProp(DeviceIntPtr dev, Atom property, XIPropertyValuePtr prop)
@@ -419,7 +445,7 @@ static int wcmSetPropertyButtonActions(DeviceIntPtr dev, Atom property,
 {
 	InputInfoPtr pInfo = (InputInfoPtr) dev->public.devicePrivate;
 	WacomDevicePtr priv = (WacomDevicePtr) pInfo->private;
-	int rc;
+	int rc, i;
 
 	DBG(10, priv, "\n");
 
@@ -442,11 +468,17 @@ static int wcmSetPropertyButtonActions(DeviceIntPtr dev, Atom property,
 	if (rc != Success)
 		return rc;
 
-	if (!checkonly)
+	for (i = 0; i < prop->size; i++)
 	{
-		wcmUpdateActionPropHandlers(prop, priv->btn_actions);
-		wcmUpdateButtonKeyActions(dev, prop, priv->keys, ARRAY_SIZE(priv->keys));
-
+		XIPropertyValuePtr subprop;
+		XIGetDeviceProperty(dev, prop, &subprop);
+		if (wcmSetActionProperties(dev, prop->data[i], subprop, checkonly) == -BadAtom)
+		{
+			/* Atom doesn't exist -- make one by hand */
+			WacomActionPtr action = wcmConstructAction(dev, subprop, ACTION_BUTTON, i, TRUE);
+			action->next = priv->actions;
+			priv->actions = action;
+		}
 	}
 	return Success;
 }
@@ -515,11 +547,25 @@ static int wcmSetWheelOrStripProperty(DeviceIntPtr dev, Atom property,
 			if (rc != Success)
 				return rc;
 
-			if (!checkonly)
+			for (i = 0; i < prop->size; i++)
 			{
-				wcmUpdateActionPropHandlers(prop, wsup->handlers);
-				wcmUpdateButtonKeyActions(dev, prop, wsup->keys,
-						          wsup->skeys);
+				XIPropertyValuePtr subprop;
+				XIGetDeviceProperty(dev, prop, &subprop);
+				if (wcmSetActionProperties(dev, prop->data[i], subprop, checkonly) == -BadAtom)
+				{
+					/* Atom doesn't exist -- make one by hand */
+					/* Yes, this is clever magic that turns the property and offset
+					 * into a value for 'positive' (all even slots are 'up' slots)
+					 * and number (the #defines are numbered in the same sequence,
+					 * and only need be adjusted by an offset).
+					 */
+					Bool positive = (i % 2 == 0);
+					int number = (i / 2) + (property == prop_strip_buttons) ? AXIS_STRIP_LEFT : AXIS_WHEEL_REL;
+
+					WacomActionPtr action = wcmConstructAction(dev, subprop, ACTION_AXIS, i, TRUE);
+					action->next = priv->actions;
+					priv->actions = action;
+				}
 			}
 
 			break;

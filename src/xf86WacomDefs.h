@@ -233,8 +233,6 @@ struct _WacomDeviceRec
 	int topPadding;		/* top padding for virtual tablet in device coordinates*/
 	/*  map zero based internal buttons to one based X buttons */
 	int button[WCM_MAX_BUTTONS];
-	/* map one based X buttons to keystrokes */
-	unsigned keys[WCM_MAX_BUTTONS+1][256];
 	int relup;
 	int reldn;
 	int wheelup;
@@ -245,11 +243,6 @@ struct _WacomDeviceRec
 	int stripldn;
 	int striprup;
 	int striprdn;
-	/* actions assigned to scroll events (default is the buttons above).
-	 * Order is: striplup, stripldn, striprup, striprdn, relup, reldwn,
-	 * wheelup, wheeldn, wheel2up, wheel2dn.
-	 * Like 'keys', this array is one-indexed */
-	unsigned scroll_keys[10+1][256];
 	WacomAction* actions;   /* List of actions associated with the device */
 	int nbuttons;           /* number of buttons for this subdevice */
 	int naxes;              /* number of axes */
@@ -294,10 +287,6 @@ struct _WacomDeviceRec
 
 	int isParent;		/* set to 1 if the device is not auto-hotplugged */
 
-	/* property handlers to listen to for action properties */
-	Atom btn_actions[WCM_MAX_BUTTONS];
-	Atom scroll_actions[10];
-
 	OsTimerPtr serial_timer; /* timer used for serial number property update */
 };
 
@@ -315,12 +304,13 @@ struct _WacomDeviceRec
 
 struct _WacomAction
 {
-	WacomActionPtr next;     /* Next action in list */
+	WacomActionPtr next;      /* Next node in list */
 
-	int type;                /* Tool type ACTION_[BUTTON|AXIS]          */
-	unsigned int number;     /* Button number or AXIS_[BLAH]            */
-	unsigned int down[256];  /* action to perform on button/scroll down */
-	unsigned int up[256];    /* action to perform on scroll up          */
+	Atom atom;                /* Atom with the canonical definition      */
+	int  type;                /* Tool type ACTION_[BUTTON|AXIS]          */
+	int  number;              /* Button number or AXIS_[BLAH]            */
+	Bool positive;            /* Button PRESS or scroll UP action        */
+	unsigned int action[256]; /* Action to perform                       */
 };
 
 /******************************************************************************
