@@ -103,6 +103,7 @@ typedef struct _param
 /* get_func/set_func calls for special parameters */
 static void* _get_property(Display *dpy, XDevice *dev, const char *prop_name, int format, Atom type, unsigned long *items);
 static void* _get(Display *dpy, XDevice *dev, const char *prop_name, int prop_offset, int format, Atom type, int items);
+static void _set(Display *dpy, XDevice *dev, const char *prop_name, int prop_offset, void *data, int format, int type, int items);
 static void map_actions(Display *dpy, XDevice *dev, param_t *param, int argc, char **argv);
 static void set_mode(Display *dpy, XDevice *dev, param_t *param, int argc, char **argv);
 static void get_mode(Display *dpy, XDevice *dev, param_t *param, int argc, char **argv);
@@ -1366,14 +1367,73 @@ static void map_actions(Display *dpy, XDevice *dev, param_t* param, int argc, ch
 	special_map_property(dpy, dev, action_prop, offset, argc, argv);
 }
 
+/**
+ * Sets a parameter to the given values. This function takes a pointer
+ * to the head of an appropriately-typed array and uses it to update
+ * the underlying device property.
+ *
+ * @param dpy          X11 display to connect to
+ * @param dev          Device to query
+ * @param prop_name    Name of device property
+ * @param prop_offset  Offset (in items) to begin writing
+ * @param data         Pointer to the data to write
+ * @param format       Format of the underlying property (8/16/32)
+ * @param type         Type of the underlying property
+ * @param items        Number of items in data to write
+ */
+static void _set(Display *dpy, XDevice *dev, const char *prop_name, int prop_offset,
+                 void *data, int format, int type, int items)
+{
+	Atom prop;
+	int i, read_format;
+	unsigned long read_items;
+	void *values;
+
+	prop = XInternAtom(dpy, prop_name, True);
+	if (!prop || !test_property(dpy, dev, prop))
+	{
+		printf("Property '%s' does not exist on device.\n",
+		       prop_name);
+		return;
+	}
+
+	values = _get_property(dpy, dev, prop_name, format, type, &read_items);
+	if (values == NULL)
+		return;
+
+	if (items > prop_offset + read_items)
+	{
+		fprintf(stderr, "   %-23s = count mismatch: expected at least %d got %d\n",
+			prop_name, items, read_items);
+		free(values);
+		return;
+	}
+
+	for (i = 0; i < items; i++)
+	{
+		switch(format)
+		{
+			case 8:
+				((char*)values)[prop_offset + i] = ((char*)data)[i];
+				break;
+			case 16:
+				((short*)values)[prop_offset + i] = ((short*)data)[i];
+				break;
+			case 32:
+				((long*)values)[prop_offset + i] = ((long*)data)[i];
+				break;
+		}
+	}
+
+	XChangeDeviceProperty(dpy, dev, prop, type, format,
+	                      PropModeReplace, values, read_items);
+
+	XFlush(dpy);
+	free(values);
+}
+
 static void set_xydefault(Display *dpy, XDevice *dev, param_t* param, int argc, char **argv)
 {
-	Atom prop, type;
-	int format;
-	unsigned char* data = NULL;
-	unsigned long nitems, bytes_after;
-	long *ldata;
-
 	if (argc != param->arg_count)
 	{
 		fprintf(stderr, "'%s' requires exactly %d value(s).\n", param->name,
@@ -1381,34 +1441,9 @@ static void set_xydefault(Display *dpy, XDevice *dev, param_t* param, int argc, 
 		return;
 	}
 
-	prop = XInternAtom(dpy, param->prop_name, True);
-	if (!prop)
-	{
-		fprintf(stderr, "Property for '%s' not available.\n",
-			param->name);
-		goto out;
-	}
-
-	XGetDeviceProperty(dpy, dev, prop, 0, 1000, False, AnyPropertyType,
-				&type, &format, &nitems, &bytes_after, &data);
-
-	if (nitems <= param->prop_offset)
-	{
-		fprintf(stderr, "Property offset doesn't exist, this is a bug.\n");
-		goto out;
-	}
-
-	ldata = (long*)data;
-	ldata[0] = -1;
-	ldata[1] = -1;
-	ldata[2] = -1;
-	ldata[3] = -1;
-
-	XChangeDeviceProperty(dpy, dev, prop, type, format,
-				PropModeReplace, data, nitems);
-	XFlush(dpy);
-out:
-	free(data);
+	long data[] = {-1, -1, -1, -1};
+	_set(dpy, dev, param->prop_name, param->prop_offset,
+	     &data, param->prop_format, param->prop_type, param->arg_count);
 }
 
 static void set_mode(Display *dpy, XDevice *dev, param_t* param, int argc, char **argv)
@@ -1442,10 +1477,6 @@ static void set_mode(Display *dpy, XDevice *dev, param_t* param, int argc, char 
 static void set_rotate(Display *dpy, XDevice *dev, param_t* param, int argc, char **argv)
 {
 	int rotation = 0;
-	Atom prop, type;
-	int format;
-	unsigned char* data;
-	unsigned long nitems, bytes_after;
 
 	if (argc != param->arg_count)
 	{
@@ -1471,28 +1502,9 @@ static void set_rotate(Display *dpy, XDevice *dev, param_t* param, int argc, cha
 		return;
 	}
 
-	prop = XInternAtom(dpy, param->prop_name, True);
-	if (!prop)
-	{
-		fprintf(stderr, "Property for '%s' not available.\n",
-			param->name);
-		return;
-	}
-
-	XGetDeviceProperty(dpy, dev, prop, 0, 1000, False, AnyPropertyType,
-				&type, &format, &nitems, &bytes_after, &data);
-
-	if (nitems == 0 || format != 8)
-	{
-		fprintf(stderr, "Property for '%s' has no or wrong value - this is a bug.\n",
-			param->name);
-		return;
-	}
-
-	*data = rotation;
-	XChangeDeviceProperty(dpy, dev, prop, type, format,
-				PropModeReplace, data, nitems);
-	XFlush(dpy);
+	char data[] = {rotation};
+	_set(dpy, dev, param->prop_name, param->prop_offset, &data,
+	     param->prop_format, param->prop_type, param->arg_count);
 
 	return;
 }
@@ -1551,10 +1563,7 @@ static void set(Display *dpy, int argc, char **argv)
 {
 	param_t *param;
 	XDevice *dev = NULL;
-	Atom prop = None, type;
-	int format;
 	unsigned char* data = NULL;
-	unsigned long nitems, bytes_after;
 	long *n;
 	char *b;
 	int i;
@@ -1589,29 +1598,9 @@ static void set(Display *dpy, int argc, char **argv)
 		goto out;
 	}
 
-	if (param->prop_name)
-	{
-		prop = XInternAtom(dpy, param->prop_name, True);
-		if (!prop || !test_property(dpy, dev, prop))
-		{
-			printf("Property '%s' does not exist on device.\n",
-				param->prop_name);
-			goto out;
-		}
-	}
-
 	if (param->set_func)
 	{
 		param->set_func(dpy, dev, param, argc - 2, &argv[2]);
-		goto out;
-	}
-
-	XGetDeviceProperty(dpy, dev, prop, 0, 1000, False, AnyPropertyType,
-				&type, &format, &nitems, &bytes_after, &data);
-
-	if (nitems <= param->prop_offset)
-	{
-		fprintf(stderr, "Property offset doesn't exist.\n");
 		goto out;
 	}
 
@@ -1621,6 +1610,13 @@ static void set(Display *dpy, int argc, char **argv)
 	{
 		fprintf(stderr, "'%s' requires exactly %d value(s).\n", param->name,
 			param->arg_count);
+		goto out;
+	}
+
+	data = calloc(param->arg_count, param->prop_format);
+	if (!data)
+	{
+		fprintf(stderr, "Unable to allocate memory.\n");
 		goto out;
 	}
 
@@ -1640,36 +1636,24 @@ static void set(Display *dpy, int argc, char **argv)
 		switch(param->prop_format)
 		{
 			case 8:
-				if (format != param->prop_format || type != XA_INTEGER) {
-					fprintf(stderr, "   %-23s = format mismatch (%d)\n",
-							param->name, format);
-					break;
-				}
-				b = (char*)data;
-				b[param->prop_offset + i] = rint(val);
+				((char*)data)[i] = rint(val);
 				break;
 			case 32:
-				if (format != param->prop_format || type != XA_INTEGER) {
-					fprintf(stderr, "   %-23s = format mismatch (%d)\n",
-							param->name, format);
-					break;
-				}
-				n = (long*)data;
-				n[param->prop_offset + i] = rint(val);
+				((long*)data)[i] = rint(val);
 				break;
 		}
 	}
 
-	XChangeDeviceProperty(dpy, dev, prop, type, format,
-				PropModeReplace, data, nitems);
-	XFlush(dpy);
+	/* set() only supports setting vanilla XA_INTEGER properties */
+	_set(dpy, dev, param->prop_name, param->prop_offset, data,
+	     param->prop_format, XA_INTEGER, param->arg_count);
 
 	for (i = 0; i < nvals; i++)
 		free(values[i]);
 	free(values);
+	free(data);
 out:
 	XCloseDevice(dpy, dev);
-	free(data);
 }
 
 /**
@@ -2204,21 +2188,8 @@ static Bool _set_matrix_prop(Display *dpy, XDevice *dev, const float fmatrix[9])
 	for (i = 0; i < ARRAY_SIZE(matrix); i++)
 		*(float*)(matrix + i) = fmatrix[i];
 
-	XGetDeviceProperty(dpy, dev, matrix_prop, 0, 9, False,
-				AnyPropertyType, &type, &format, &nitems,
-				&bytes_after, (unsigned char**)&data);
-
-	if (format != 32 || type != XInternAtom(dpy, "FLOAT", True))
-	{
-		fprintf(stderr, "Property for '%s' has unexpected type - this is a bug.\n",
-			"Coordinate Transformation Matrix");
-		return False;
-	}
-
-	XChangeDeviceProperty(dpy, dev, matrix_prop, type, format,
-			      PropModeReplace, (unsigned char*)matrix, 9);
-	XFree(data);
-	XFlush(dpy);
+	_set(dpy, dev, "Coordinate Transformation Matrix", 0, &matrix,
+	     32, XInternAtom(dpy, "FLOAT", True), 9);
 
 	return True;
 }
