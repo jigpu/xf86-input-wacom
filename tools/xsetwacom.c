@@ -627,6 +627,22 @@ static void print_value(param_t *param, const char *msg, ...)
 	va_end(va_args);
 }
 
+/**
+ * Helper function to get the byte size of X11 properties (as used by
+ * XGetDeviceProperty and friends). 'format' specifies the underlying
+ * type the X server stores properties in, which doesn't match up
+ * with reality on 64-bit systems (where type == 32 implies 'long', but
+ * sizeof(long)*4 != 32)
+ */
+size_t _get_size(int format)
+{
+	switch (format) {
+		case 32: return sizeof(long);
+		case 16: return sizeof(short int);
+		case  8: return sizeof(char);
+	}
+}
+
 static void usage(void)
 {
 	printf(
@@ -1691,10 +1707,11 @@ static void* _get_property(Display *dpy, XDevice *dev, const char *prop_name,
 
 	do
 	{
-		int offset = *items * format / 8;
+		int prop_offset = *items * format / 32;       /* docs specify always 32-bit */
+		int real_offset = *items * _get_size(format); /* depends on format          */
 		void *tmp;
 
-		error = XGetDeviceProperty(dpy, dev, read_prop, offset / 4, 1,
+		error = XGetDeviceProperty(dpy, dev, read_prop, prop_offset, 1,
 		                            False, AnyPropertyType, &read_type,
 		                            &read_format, &read_items, &bytes_after,
 		                            &read);
@@ -1715,7 +1732,7 @@ static void* _get_property(Display *dpy, XDevice *dev, const char *prop_name,
 		}
 
 		*items += read_items;
-		tmp = realloc(data, *items * format / 8);
+		tmp = realloc(data, *items * _get_size(format));
 		if (tmp == NULL)
 		{
 			fprintf(stderr, "Unable to allocate memory.\n");
@@ -1725,7 +1742,7 @@ static void* _get_property(Display *dpy, XDevice *dev, const char *prop_name,
 		else
 		{
 			data = tmp;
-			memcpy(&data[offset], read, read_items * format / 8);
+			memcpy(&data[real_offset], read, read_items * _get_size(format));
 			XFree(read);
 		}
 	}
@@ -1771,8 +1788,8 @@ static void* _get(Display *dpy, XDevice *dev, const char *prop_name, int prop_of
 		return NULL;
 	}
 
-	data = malloc(items * format / 8);
-	memcpy(data, read + (prop_offset * format / 8), items * format / 8);
+	data = malloc(items * _get_size(format));
+	memcpy(data, read + (prop_offset * _get_size(format)), items * _get_size(format));
 	free(read);
 	return data;
 }
