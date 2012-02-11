@@ -2118,7 +2118,8 @@ Bool get_mapped_area(Display *dpy, XDevice *dev, int *width, int *height, int *x
 	Atom type;
 	int format;
 	unsigned long nitems, bytes_after;
-	float *data;
+	long *data;
+	float matrix[9] = {};
 	Bool matrix_is_valid = True;
 	int i;
 
@@ -2144,24 +2145,27 @@ Bool get_mapped_area(Display *dpy, XDevice *dev, int *width, int *height, int *x
 		return False;
 	}
 
+	for (i = 0; i < 9; i++)
+		matrix[i] = *(float*)(data + i);
+
 	TRACE("Current transformation matrix:\n");
-	TRACE("	[ %f %f %f ]\n", data[0], data[1], data[2]);
-	TRACE("	[ %f %f %f ]\n", data[3], data[4], data[5]);
-	TRACE("	[ %f %f %f ]\n", data[6], data[7], data[8]);
+	TRACE("	[ %f %f %f ]\n", matrix[0], matrix[1], matrix[2]);
+	TRACE("	[ %f %f %f ]\n", matrix[3], matrix[4], matrix[5]);
+	TRACE("	[ %f %f %f ]\n", matrix[6], matrix[7], matrix[8]);
 
 	for (i = 0; i < nitems && matrix_is_valid; i++)
 	{
 		switch (i) {
-			case 0: *width  = rint(display_width  * data[i]); break;
-			case 2: *x_org  = rint(display_width  * data[i]); break;
-			case 4: *height = rint(display_height * data[i]); break;
-			case 5: *y_org  = rint(display_height * data[i]); break;
+			case 0: *width  = rint(display_width  * matrix[i]); break;
+			case 2: *x_org  = rint(display_width  * matrix[i]); break;
+			case 4: *height = rint(display_height * matrix[i]); break;
+			case 5: *y_org  = rint(display_height * matrix[i]); break;
 			case 8:
-				if (data[i] != 1)
+				if (matrix[i] != 1)
 					matrix_is_valid = False;
 				break;
 			default:
-				if (data[i] != 0)
+				if (matrix[i] != 0)
 					matrix_is_valid = False;
 				break;
 		}
