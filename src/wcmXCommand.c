@@ -79,6 +79,19 @@ int wcmDevSwitchMode(ClientPtr client, DeviceIntPtr dev, int mode)
 	return wcmDevSwitchModeCall(pInfo, mode);
 }
 
+static int getMaximumX11Button(InputInfoPtr pInfo) {
+	WacomDevicePtr priv = (WacomDevicePtr)pInfo->private;
+	int nbuttons = 0;
+	int i;
+
+	for (i = 0; i < WCM_MAX_BUTTONS && i < priv->nbuttons; i++) {
+		int x11_button = priv->button[i];
+		if (x11_button > nbuttons)
+			nbuttons = x11_button;
+	}
+	return nbuttons;
+}
+
 Atom prop_devnode;
 Atom prop_rotation;
 Atom prop_tablet_area;
@@ -229,7 +242,7 @@ void InitWcmDeviceProperties(InputInfoPtr pInfo)
 
 
 	/* default to no actions */
-	nbuttons = min(max(priv->nbuttons + 4, 7), WCM_MAX_BUTTONS);
+	nbuttons = getMaximumX11Button(pInfo);
 	memset(values, 0, sizeof(values));
 	prop_btnactions = InitWcmAtom(pInfo->dev, WACOM_PROP_BUTTON_ACTIONS, XA_ATOM, 32, nbuttons, values);
 
@@ -850,7 +863,7 @@ int wcmSetProperty(DeviceIntPtr dev, Atom property, XIPropertyValuePtr prop,
 #endif
 	} else if (property == prop_btnactions)
 	{
-		int nbuttons = min(max(priv->nbuttons + 4, 7), WCM_MAX_BUTTONS);
+		int nbuttons = getMaximumX11Button(pInfo);
 		if (prop->size != nbuttons)
 			return BadMatch;
 		wcmSetPropertyButtonActions(dev, property, prop, checkonly);
