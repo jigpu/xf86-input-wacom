@@ -433,7 +433,7 @@ static void sendWheelStripEvents(InputInfoPtr pInfo, const WacomDeviceState* ds,
 	{
 		DBG(10, priv, "Left touch strip scroll delta = %d\n", delta);
 		fakeButton = getWheelButton(delta, priv->striplup, priv->stripldn,
-		                            priv->strip_keys[0+1], priv->strip_keys[1+1], &fakeKey);
+		                            priv->scroll_keys[0+0+1], priv->scroll_keys[1+0+1], &fakeKey);
 		sendWheelStripEvent(fakeButton, fakeKey, pInfo, first_val, num_vals, valuators);
 	}
 
@@ -443,7 +443,7 @@ static void sendWheelStripEvents(InputInfoPtr pInfo, const WacomDeviceState* ds,
 	{
 		DBG(10, priv, "Right touch strip scroll delta = %d\n", delta);
 		fakeButton = getWheelButton(delta, priv->striprup, priv->striprdn,
-		                            priv->strip_keys[2+1], priv->strip_keys[3+1], &fakeKey);
+		                            priv->scroll_keys[2+0+11], priv->scroll_keys[3+0+1], &fakeKey);
 		sendWheelStripEvent(fakeButton, fakeKey, pInfo, first_val, num_vals, valuators);
 	}
 
@@ -453,7 +453,7 @@ static void sendWheelStripEvents(InputInfoPtr pInfo, const WacomDeviceState* ds,
 	{
 		DBG(10, priv, "Relative wheel scroll delta = %d\n", delta);
 		fakeButton = getWheelButton(delta, priv->relup, priv->reldn,
-		                            priv->wheel_keys[0+1], priv->wheel_keys[1+1], &fakeKey);
+		                            priv->scroll_keys[0+4+1], priv->scroll_keys[1+4+1], &fakeKey);
 		sendWheelStripEvent(fakeButton, fakeKey, pInfo, first_val, num_vals, valuators);
 	}
 
@@ -463,7 +463,7 @@ static void sendWheelStripEvents(InputInfoPtr pInfo, const WacomDeviceState* ds,
 	{
 		DBG(10, priv, "Left touch wheel scroll delta = %d\n", delta);
 		fakeButton = getWheelButton(delta, priv->wheelup, priv->wheeldn,
-		                            priv->wheel_keys[2+1], priv->wheel_keys[3+1], &fakeKey);
+		                            priv->scroll_keys[2+4+1], priv->scroll_keys[3+4+1], &fakeKey);
 		sendWheelStripEvent(fakeButton, fakeKey, pInfo, first_val, num_vals, valuators);
 	}
 
@@ -473,7 +473,7 @@ static void sendWheelStripEvents(InputInfoPtr pInfo, const WacomDeviceState* ds,
 	{
 		DBG(10, priv, "Right touch wheel scroll delta = %d\n", delta);
 		fakeButton = getWheelButton(delta, priv->wheel2up, priv->wheel2dn,
-		                            priv->wheel_keys[4+1], priv->wheel_keys[5+1], &fakeKey);
+		                            priv->scroll_keys[4+4+1], priv->scroll_keys[5+4+1], &fakeKey);
 		sendWheelStripEvent(fakeButton, fakeKey, pInfo, first_val, num_vals, valuators);
 	}
 }

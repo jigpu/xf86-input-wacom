@@ -241,19 +241,15 @@ struct _WacomDeviceRec
 	int wheeldn;
 	int wheel2up;
 	int wheel2dn;
-	/* keystrokes assigned to wheel events (default is the buttons above).
-	 * Order is relup, reldwn, wheelup, wheeldn, wheel2up, wheel2dn.
-	 * Like 'keys', this array is one-indexed */
-	unsigned wheel_keys[6+1][256];
-
 	int striplup;
 	int stripldn;
 	int striprup;
 	int striprdn;
-	/* keystrokes assigned to strip events (default is the buttons above).
-	 * Order is striplup, stripldn, striprup, striprdn. Like 'keys', this
-	 * array is one-indexed */
-	unsigned strip_keys[4+1][256];
+	/* actions assigned to scroll events (default is the buttons above).
+	 * Order is: striplup, stripldn, striprup, striprdn, relup, reldwn,
+	 * wheelup, wheeldn, wheel2up, wheel2dn.
+	 * Like 'keys', this array is one-indexed */
+	unsigned scroll_keys[10+1][256];
 	int nbuttons;           /* number of buttons for this subdevice */
 	int naxes;              /* number of axes */
 				/* FIXME: always 6, and the code relies on that... */
@@ -299,8 +295,7 @@ struct _WacomDeviceRec
 
 	/* property handlers to listen to for action properties */
 	Atom btn_actions[WCM_MAX_BUTTONS];
-	Atom wheel_actions[6];
-	Atom strip_actions[4];
+	Atom scroll_actions[10];
 
 	OsTimerPtr serial_timer; /* timer used for serial number property update */
 };
