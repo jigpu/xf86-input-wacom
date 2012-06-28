@@ -101,6 +101,7 @@
 
 typedef struct _WacomModel WacomModel, *WacomModelPtr;
 typedef struct _WacomDeviceRec WacomDeviceRec, *WacomDevicePtr;
+typedef struct _WacomAction WacomAction, *WacomActionPtr;
 typedef struct _WacomDeviceState WacomDeviceState, *WacomDeviceStatePtr;
 typedef struct _WacomChannel  WacomChannel, *WacomChannelPtr;
 typedef struct _WacomCommonRec WacomCommonRec, *WacomCommonPtr;
@@ -250,6 +251,7 @@ struct _WacomDeviceRec
 	 * wheelup, wheeldn, wheel2up, wheel2dn.
 	 * Like 'keys', this array is one-indexed */
 	unsigned scroll_keys[10+1][256];
+	WacomAction* actions;   /* List of actions associated with the device */
 	int nbuttons;           /* number of buttons for this subdevice */
 	int naxes;              /* number of axes */
 				/* FIXME: always 6, and the code relies on that... */
@@ -298,6 +300,28 @@ struct _WacomDeviceRec
 	Atom scroll_actions[10];
 
 	OsTimerPtr serial_timer; /* timer used for serial number property update */
+};
+
+/******************************************************************************
+ * WacomAction
+ *****************************************************************************/
+#define ACTION_BUTTON      1
+#define ACTION_AXIS        2
+
+#define AXIS_STRIP_LEFT    1
+#define AXIS_STRIP_RIGHT   2
+#define AXIS_WHEEL_REL     3
+#define AXIS_WHEEL_LEFT    4
+#define AXIS_WHEEL_RIGHT   5
+
+struct _WacomAction
+{
+	WacomActionPtr next;     /* Next action in list */
+
+	int type;                /* Tool type ACTION_[BUTTON|AXIS]          */
+	unsigned int number;     /* Button number or AXIS_[BLAH]            */
+	unsigned int down[256];  /* action to perform on button/scroll down */
+	unsigned int up[256];    /* action to perform on scroll up          */
 };
 
 /******************************************************************************
