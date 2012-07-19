@@ -272,6 +272,19 @@ static Bool isdv4Init(InputInfoPtr pInfo, char* id, float *version)
 	/*set the model */
 	common->wcmModel = &isdv4General;
 
+	/* set available buttons */
+	if (IsPen(priv)) {
+		priv->nbuttons = 3;
+		priv->button_default[0] = 1;
+		priv->button_default[1] = 2;
+		priv->button_default[2] = 3;
+	}
+	else if (IsTouch(priv)) {
+		priv->nbuttons = 2;
+		priv->button_default[0] = 1;
+		priv->button_default[1] = 3;
+	}
+
 	return Success;
 }
 

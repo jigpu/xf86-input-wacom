@@ -370,27 +370,51 @@ static Bool usbWcmInit(InputInfoPtr pInfo, char* id, float *version)
 		common->wcmResolX = common->wcmResolY = 1016;
 	}
 
-	/* Find out supported button codes. */
-	usbdata->npadkeys = 0;
-	for (i = 0; i < ARRAY_SIZE(padkey_codes); i++)
-		if (ISBITSET (common->wcmKeys, padkey_codes [i]))
-			usbdata->padkey_code [usbdata->npadkeys++] = padkey_codes [i];
+	if (IsPad(priv)) {
+		/* Find out supported button codes. */
+		usbdata->npadkeys = 0;
+		for (i = 0; i < ARRAY_SIZE(padkey_codes); i++) {
+			if (ISBITSET (common->wcmKeys, padkey_codes [i])) {
+				priv->button_default[usbdata->npadkeys] = (i < 3) ? i + 1 : i + 5;
+				usbdata->padkey_code [usbdata->npadkeys] = padkey_codes [i];
+				usbdata->npadkeys++;
+			}
+		}
+	}
 
-	if (usbdata->npadkeys == 0) {
+	if (IsCursor(priv) || (IsPad(priv) && usbdata->npadkeys == 0)) {
 		/* If no pad keys were detected, entertain the possibility that any
 		 * mouse buttons which exist may belong to the pad (e.g. Graphire4).
 		 * If we're wrong, this will over-state the capabilities of the pad
 		 * but that shouldn't actually cause problems.
 		 */
-		for (i = ARRAY_SIZE(mouse_codes) - 1; i > 0; i--)
+		for (i = 0; i < ARRAY_SIZE(mouse_codes); i++)
 			if (ISBITSET(common->wcmKeys, mouse_codes[i]))
-				break;
+				usbdata->padkey_code [usbdata->npadkeys++] = mouse_codes[i];
 
-		/* Make sure room for fixed map mouse buttons.  This
-		 * means mappings may overlap with padkey_codes[].
-		 */
-		if (i != 0)
-			usbdata->npadkeys = WCM_USB_MAX_MOUSE_BUTTONS;
+		for (i=0; i<usbdata->npadkeys; i++) {
+			switch (usbdata->padkey_code[i]) {
+				case BTN_LEFT:    priv->button_default[i] = 1; break;
+				case BTN_MIDDLE:  priv->button_default[i] = 2; break;
+				case BTN_RIGHT:   priv->button_default[i] = 3; break;
+				case BTN_BACK:    priv->button_default[i] = 8; break;
+				case BTN_FORWARD: priv->button_default[i] = 9; break;
+				case BTN_SIDE:    priv->button_default[i] = 8; break;
+				case BTN_EXTRA:   priv->button_default[i] = 9; break;
+			}
+		}
+	}
+
+	if (IsPen(priv)) {
+		priv->button_default[0] = 1;
+		priv->button_default[1] = 2;
+		priv->button_default[2] = 3;
+	}
+
+	if (IsTouch(priv)) {
+		/* We only simulate left and right click */
+		priv->button_default[0] = 1;
+		priv->button_default[1] = 3;
 	}
 
 	/* nbuttons tracks maximum buttons on all tools (stylus/mouse).
@@ -1323,42 +1347,17 @@ static int usbParseBTNEvent(WacomCommonPtr common,
 	int change = 1;
 	wcmUSBData *usbdata = common->private;
 
-	switch (event->code)
+	for (nkeys = 0; nkeys < usbdata->npadkeys; nkeys++)
 	{
-		case BTN_LEFT:
-			ds->buttons = mod_buttons(ds->buttons, 0, event->value);
+		if (event->code == usbdata->padkey_code[nkeys])
+		{
+			ds->buttons = mod_buttons(ds->buttons, nkeys, event->value);
 			break;
-
-		case BTN_MIDDLE:
-			ds->buttons = mod_buttons(ds->buttons, 1, event->value);
-			break;
-
-		case BTN_RIGHT:
-			ds->buttons = mod_buttons(ds->buttons, 2, event->value);
-			break;
-
-		case BTN_SIDE:
-		case BTN_BACK:
-			ds->buttons = mod_buttons(ds->buttons, 3, event->value);
-			break;
-
-		case BTN_EXTRA:
-		case BTN_FORWARD:
-			ds->buttons = mod_buttons(ds->buttons, 4, event->value);
-			break;
-
-		default:
-			for (nkeys = 0; nkeys < usbdata->npadkeys; nkeys++)
-			{
-				if (event->code == usbdata->padkey_code[nkeys])
-				{
-					ds->buttons = mod_buttons(ds->buttons, nkeys, event->value);
-					break;
-				}
-			}
-			if (nkeys >= usbdata->npadkeys)
-				change = 0;
+		}
 	}
+	if (nkeys >= usbdata->npadkeys)
+		change = 0;
+
 	return change;
 }
 

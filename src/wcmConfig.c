@@ -38,7 +38,6 @@ static int wcmAllocate(InputInfoPtr pInfo)
 	WacomDevicePtr   priv   = NULL;
 	WacomCommonPtr   common = NULL;
 	WacomToolPtr     tool   = NULL;
-	int i;
 
 	priv = calloc(1, sizeof(WacomDeviceRec));
 	if (!priv)
@@ -68,12 +67,8 @@ static int wcmAllocate(InputInfoPtr pInfo)
 	priv->nPressCtrl [2] = 100;  /* pressure curve x1 */
 	priv->nPressCtrl [3] = 100;  /* pressure curve y1 */
 
-	/* Default button and expresskey values, offset buttons 4 and higher
-	 * by the 4 scroll buttons. */
-	for (i=0; i<WCM_MAX_BUTTONS; i++)
-		priv->button_default[i] = (i < 3) ? i + 1 : i + 5;
+	/* Don't initialize buttons -- leave this up to wcmUSB/wcmISDV4 */
 
-	priv->nbuttons = WCM_MAX_BUTTONS;       /* Default number of buttons */
 	priv->wheel_default[WHEEL_REL_UP] = 5;
 	priv->wheel_default[WHEEL_REL_DN] = 4;
 	/* wheel events are set to 0, but the pad overwrites this default
