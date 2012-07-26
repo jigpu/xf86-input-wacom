@@ -124,7 +124,7 @@ static void wcmResetButtonAction(InputInfoPtr pInfo, int button, int nbuttons)
 	int x11_button = priv->button_default[button];
 	char name[64];
 
-	sprintf(name, "Wacom button action %d", button);
+	sprintf(name, "Wacom button %c action", 'A' + button);
 	new_action[0] = AC_BUTTON | AC_KEYBTNPRESS | x11_button;
 	wcmResetAction(pInfo, name, button, priv->btn_actions, priv->keys, &new_action, prop_btnactions, nbuttons);
 }
