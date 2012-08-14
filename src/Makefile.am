@@ -32,6 +32,7 @@ include common.mk
 @DRIVER_NAME@_drv_ladir = @inputdir@
 
 AM_CPPFLAGS=-I$(top_srcdir)/include/
-AM_CFLAGS = $(XORG_CFLAGS) $(CWARNFLAGS) $(UDEV_CFLAGS)
+AM_CFLAGS = $(XORG_CFLAGS) $(CWARNFLAGS) $(UDEV_CFLAGS) $(WACOM_CFLAGS)
+LIBS = $(WACOM_LIBS)
 
 @DRIVER_NAME@_drv_la_SOURCES = $(DRIVER_SOURCES)

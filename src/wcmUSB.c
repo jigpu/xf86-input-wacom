@@ -28,6 +28,8 @@
 #include <sys/utsname.h>
 #include <linux/version.h>
 
+#include <libwacom/libwacom.h>
+
 #define MAX_USB_EVENTS 32
 
 typedef struct {
@@ -371,6 +373,9 @@ static Bool usbWcmInit(InputInfoPtr pInfo, char* id, float *version)
 	}
 
 	if (IsPad(priv)) {
+		WacomDeviceDatabase* db = libwacom_database_new();
+		WacomDevice* dev = libwacom_new_from_usbid(db, sID.vendor, sID.product, NULL);
+
 		/* Find out supported button codes. */
 		usbdata->npadkeys = 0;
 		for (i = 0; i < ARRAY_SIZE(padkey_codes); i++) {
@@ -380,14 +385,40 @@ static Bool usbWcmInit(InputInfoPtr pInfo, char* id, float *version)
 				usbdata->npadkeys++;
 			}
 		}
-	}
 
-	if (IsCursor(priv) || (IsPad(priv) && usbdata->npadkeys == 0)) {
-		/* If no pad keys were detected, entertain the possibility that any
-		 * mouse buttons which exist may belong to the pad (e.g. Graphire4).
-		 * If we're wrong, this will over-state the capabilities of the pad
-		 * but that shouldn't actually cause problems.
-		 */
+		/* Look for mouse buttons */
+		for (i = 0; dev && i < libwacom_get_num_buttons(dev); i++) {
+			WacomButtonFlags flags = libwacom_get_button_flag(dev, 'A' + i);
+			switch (flags & WACOM_BUTTON_MOUSEBUTTON) {
+			case WMOUSE_LEFT:
+				priv->button_default[i] = 1;
+				usbdata->padkey_code[i] = BTN_LEFT;
+				usbdata->npadkeys++;
+				break;
+			case WMOUSE_MIDDLE:
+				priv->button_default[i] = 2;
+				usbdata->padkey_code[i] = BTN_MIDDLE;
+				usbdata->npadkeys++;
+				break;
+			case WMOUSE_RIGHT:
+				priv->button_default[i] = 3;
+				usbdata->padkey_code[i] = BTN_RIGHT;
+				usbdata->npadkeys++;
+				break;
+			case WMOUSE_BACK:
+				priv->button_default[i] = 8;
+				usbdata->padkey_code[i] = BTN_BACK;
+				usbdata->npadkeys++;
+				break;
+			case WMOUSE_FORWARD:
+				priv->button_default[i] = 9;
+				usbdata->padkey_code[i] = BTN_FORWARD;
+				usbdata->npadkeys++;
+				break;
+			}
+		}
+	}
+	else if (IsCursor(priv)) {
 		for (i = 0; i < ARRAY_SIZE(mouse_codes); i++)
 			if (ISBITSET(common->wcmKeys, mouse_codes[i]))
 				usbdata->padkey_code [usbdata->npadkeys++] = mouse_codes[i];
@@ -404,14 +435,13 @@ static Bool usbWcmInit(InputInfoPtr pInfo, char* id, float *version)
 			}
 		}
 	}
-
-	if (IsPen(priv)) {
+	else if (IsPen(priv)) {
 		priv->button_default[0] = 1;
 		priv->button_default[1] = 2;
 		priv->button_default[2] = 3;
 	}
 
-	if (IsTouch(priv)) {
+	else if (IsTouch(priv)) {
 		/* We only simulate left and right click */
 		priv->button_default[0] = 1;
 		priv->button_default[1] = 3;
