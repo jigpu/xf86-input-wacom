@@ -1413,8 +1413,6 @@ static void usbParseBTNEvent(WacomCommonPtr common,
 			}
 			if (nkeys >= usbdata->npadkeys)
 				change = 0;
-			else if (!ds->device_type) /* expresskey pressed at startup */
-				ds->device_type = PAD_ID;
 	}
 
 	channel->dirty |= change;
@@ -1422,16 +1420,20 @@ static void usbParseBTNEvent(WacomCommonPtr common,
 
 /**
  * Translates a tool code from the kernel (e.g. BTN_TOOL_PEN) into the
- * corresponding device type for the driver (e.g. STYLUS_ID).
+ * corresponding device type for the driver (e.g. STYLUS_ID). If "relaxed"
+ * is set, the function is provided additional freedom in determining the
+ * device type from the event.
  *
  * @param[in] common
  * @param[in] type      Linux input tool type (e.g. EV_KEY)
  * @param[in] code      Linux input tool code (e.g. BTN_STYLUS_PEN)
+ * @param[in] relaxed   Allow the function to return a "best guess" if unknown
  * @return              Wacom device ID (e.g. STYLUS_ID) or 0 if no match.
  */
-static int toolTypeToDeviceType(WacomCommonPtr common, int type, int code)
+static int eventToDeviceType(WacomCommonPtr common, int type, int code, Bool relaxed)
 {
 	wcmUSBData* private = common->private;
+	int i;
 
 	if (type == EV_KEY) {
 		switch(code) {
@@ -1455,6 +1457,14 @@ static int toolTypeToDeviceType(WacomCommonPtr common, int type, int code)
 			case BTN_TOOL_RUBBER:
 				return ERASER_ID;
 		}
+
+		if (!relaxed)
+			return 0;
+
+		for (i = 0; i < private->npadkeys; i++)
+			if (private->padkey_code[i] == code)
+				return PAD_ID;
+
 	}
 	else if (type == EV_ABS) {
 		switch (code) {
@@ -1490,7 +1500,7 @@ static int refreshDeviceType(WacomCommonPtr common)
 	for (i = 0; i < KEY_MAX; i++)
 	{
 		if (ISBITSET(keys, i))
-			device_type = toolTypeToDeviceType(common, EV_KEY, i);
+			device_type = eventToDeviceType(common, EV_KEY, i, FALSE);
 		if (device_type)
 			return device_type;
 	}
@@ -1517,10 +1527,11 @@ static int usbInitToolType(WacomCommonPtr common, const struct input_event *even
                            int nevents, int last_device_type)
 {
 	int i, device_type = 0;
+	const struct input_event *p;
 
-	for (i = 0; (i < nevents) && !device_type; ++i, event_ptr++)
+	for (i = 0, p = event_ptr; (i < nevents) && !device_type; ++i, p++)
 	{
-		device_type = toolTypeToDeviceType(common, event_ptr->type, event_ptr->code);
+		device_type = eventToDeviceType(common, p->type, p->code, FALSE);
 	}
 
 	if (!device_type)
@@ -1528,6 +1539,12 @@ static int usbInitToolType(WacomCommonPtr common, const struct input_event *even
 
 	if (!device_type)
 		device_type = refreshDeviceType(common);
+
+	for (i = 0, p = event_ptr; (i < nevents) && !device_type; ++i, p++) {
+		device_type = eventToDeviceType(common, p->type, p->code, TRUE);
+		if (device_type)
+			DBG(0, common, "Device type discovered with relaxed checks; type may be incorrect.");
+	}
 
 	return device_type;
 }
@@ -1565,6 +1582,12 @@ static void usbDispatchEvents(InputInfoPtr pInfo)
 	                                         private->wcmEvents,
 	                                         private->wcmEventCnt,
 	                                         dslast.device_type);
+
+	if (!private->wcmDeviceType) {
+		DBG(0, common, "Type of device could not be determined. Skipping event frame.");
+		private->wcmEventCnt = 0;
+		return;
+	}
 
 	if (private->wcmPenTouch)
 	{
