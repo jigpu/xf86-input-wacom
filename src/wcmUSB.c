@@ -1655,12 +1655,10 @@ static void usbDispatchEvents(InputInfoPtr pInfo)
 		}
 		else if (event->type == EV_KEY)
 		{
-			/* Button events can be from puck or expresskeys */
-			int btn_channel = (ds->device_type == CURSOR_ID) ?
-					   channel : PAD_CHANNEL;
+			DBG(0, common, "This event would have gone to the PAD_CHANNEL, but doesn't now!");
 
 			usbParseKeyEvent(common, event, channel);
-			usbParseBTNEvent(common, event, btn_channel);
+			usbParseBTNEvent(common, event, channel);
 		}
 	} /* next event */
 
