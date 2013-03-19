@@ -294,6 +294,21 @@ static CARD32 wcmSingleFingerTapTimer(OsTimerPtr timer, CARD32 time, pointer arg
 	return 0;
 }
 
+static CARD32 wcmSingleFingerPressTimer(OsTimerPtr timer, CARD32 time, pointer arg)
+{
+	WacomDevicePtr priv = (WacomDevicePtr)arg;
+	WacomCommonPtr common = priv->common;
+
+	if (common->wcmGestureMode == GESTURE_PREDRAG_MODE)
+	{
+		/* left button down */
+		wcmSendButtonClick(priv, 1, 1);
+		common->wcmGestureMode = GESTURE_DRAG_MODE;
+	}
+
+	return 0;
+}
+
 /* A single finger tap is defined as 1 finger tap that lasts less than
  * wcmTapTime.  It results in a left button press.
  *
@@ -346,10 +361,10 @@ static void wcmSingleFingerTap(WacomDevicePtr priv)
 static void wcmSingleFingerPress(WacomDevicePtr priv)
 {
 	WacomCommonPtr common = priv->common;
-	WacomChannelPtr firstChannel = getContactNumber(common, 0);
-	WacomChannelPtr secondChannel = getContactNumber(common, 1);
-	Bool firstInProx = firstChannel && firstChannel->valid.states[0].proximity;
-	Bool secondInProx = secondChannel && secondChannel->valid.states[0].proximity;
+	WacomDeviceState ds[2] = {{0}}, dsLast[2] = {{0}};
+
+	getStateHistory(common, ds, ARRAY_SIZE(ds), 0);
+	getStateHistory(common, dsLast, ARRAY_SIZE(dsLast), 1);
 
 	DBG(10, priv, "\n");
 
@@ -357,12 +372,11 @@ static void wcmSingleFingerPress(WacomDevicePtr priv)
 	if (!TabletHasFeature(priv->common, WCM_LCD))
 		return;
 
-	if (firstInProx && !secondInProx) {
-		firstChannel->valid.states[0].buttons |= 1;
-		common->wcmGestureMode = GESTURE_DRAG_MODE;
+	if (ds[0].proximity && !dsLast[0].proximity && !ds[1].proximity) {
+		common->wcmGestureMode = GESTURE_PREDRAG_MODE;
+		TimerSet(priv->tap_timer, 0, common->wcmGestureParameters.wcmTapTime, wcmSingleFingerPressTimer, priv);
 	}
-	else {
-		firstChannel->valid.states[0].buttons &= ~1;
+	else if (!ds[0].proximity || ds[1].proximity){
 		common->wcmGestureMode = GESTURE_NONE_MODE;
 	}
 }
@@ -397,8 +411,9 @@ void wcmGestureFilter(WacomDevicePtr priv, int touch_id)
 	 */
 	if (ds[0].proximity && ds[1].proximity)
 	{
-		if (common->wcmGestureMode == GESTURE_NONE_MODE)
+		if (common->wcmGestureMode == GESTURE_NONE_MODE || common->wcmGestureMode == GESTURE_PREDRAG_MODE) {
 			common->wcmGestureMode = GESTURE_LAG_MODE;
+		}
 	}
 	/* When only 1 finger is in proximity, it can be in either LAG mode,
 	 * NONE mode or DRAG mode.
@@ -412,7 +427,7 @@ void wcmGestureFilter(WacomDevicePtr priv, int touch_id)
 	 * That could use some re-arranging/cleanup.
 	 *
 	 */
-	else if (dsLast[0].proximity && common->wcmGestureMode != GESTURE_DRAG_MODE)
+	else if (dsLast[0].proximity && common->wcmGestureMode != GESTURE_DRAG_MODE && common->wcmGestureMode != GESTURE_PREDRAG_MODE)
 	{
 		CARD32 ms = GetTimeInMillis();
 
@@ -454,12 +469,20 @@ void wcmGestureFilter(WacomDevicePtr priv, int touch_id)
 
 		/* got second touch in TapTime interval after first one,
 		 * switch to DRAG mode */
-		if (common->wcmGestureMode == GESTURE_PREDRAG_MODE)
+		if (common->wcmGestureMode == GESTURE_PREDRAG_MODE && !TabletHasFeature(priv->common, WCM_LCD))
 		{
 			/* left button down */
 			wcmSendButtonClick(priv, 1, 1);
 			common->wcmGestureMode = GESTURE_DRAG_MODE;
 			goto ret;
+		}
+	}
+	if (ds[0].proximity && !ds[1].proximity) {
+		if (common->wcmGestureMode == GESTURE_PREDRAG_MODE && TabletHasFeature(priv->common, WCM_LCD)) {
+			if (touchDistance(ds[0], common->wcmGestureState[0]) > 10) {
+				common->wcmGestureMode = GESTURE_NONE_MODE;
+				goto ret;
+			}
 		}
 	}
 
@@ -474,6 +497,12 @@ void wcmGestureFilter(WacomDevicePtr priv, int touch_id)
 		/* if were in DRAG mode, send left button up now */
 		if (common->wcmGestureMode == GESTURE_DRAG_MODE)
 			wcmSendButtonClick(priv, 1, 0);
+
+		/* if we're in PREDRAG mode on an LCD, send entire click now */
+		if (common->wcmGestureMode == GESTURE_PREDRAG_MODE && TabletHasFeature(priv->common, WCM_LCD)) {
+			wcmSendButtonClick(priv, 1, 1);
+			wcmSendButtonClick(priv, 1, 0);
+		}
 
 		/* exit gesture mode when both fingers are out */
 		common->wcmGestureMode = GESTURE_NONE_MODE;
@@ -741,7 +770,7 @@ static void wcmFingerZoom(WacomDevicePtr priv)
 
 Bool wcmTouchNeedSendEvents(WacomCommonPtr common)
 {
-	return !(common->wcmGestureMode & ~GESTURE_DRAG_MODE);
+	return !(common->wcmGestureMode & ~(GESTURE_DRAG_MODE | GESTURE_PREDRAG_MODE));
 }
 
 /* vim: set noexpandtab tabstop=8 shiftwidth=8: */
