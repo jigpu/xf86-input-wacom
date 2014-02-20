@@ -283,7 +283,6 @@ struct _WacomDeviceRec
 
 	/* state fields in device coordinates */
 	struct _WacomDeviceState oldState; /* previous state information */
-	int oldCursorHwProx;	/* previous cursor hardware proximity */
 
 	/* JEJ - filters */
 	int pPressCurve[FILTER_PRESSURE_RES + 1]; /* pressure curve */

@@ -1212,7 +1212,7 @@ static void commonDispatchDevice(WacomCommonPtr common, unsigned int channel,
 		}
 		filtered.pressure = applyPressureCurve(priv,&filtered);
 	}
-	else if (IsCursor(priv) && !priv->oldCursorHwProx)
+	else if (IsCursor(priv) && !priv->oldState.proximity)
 	{
 		/* initial current max distance for Intuos series */
 		if ((TabletHasFeature(common, WCM_ROTATION)) ||
@@ -1221,10 +1221,6 @@ static void commonDispatchDevice(WacomCommonPtr common, unsigned int channel,
 		else
 			common->wcmMaxCursorDist = 0;
 	}
-
-	/* Store cursor hardware prox for next use */
-	if (IsCursor(priv))
-		priv->oldCursorHwProx = ds->proximity;
 
 	/* User-requested filtering comes next */
 
