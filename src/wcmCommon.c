@@ -251,10 +251,10 @@ static void sendAButton(InputInfoPtr pInfo, int button, int mask,
 	WacomDevicePtr priv = (WacomDevicePtr) pInfo->private;
 #ifdef DEBUG
 	WacomCommonPtr common = priv->common;
-#endif
 
 	DBG(4, priv, "TPCButton(%s) button=%d state=%d\n",
 	    common->wcmTPCButton ? "on" : "off", button, mask);
+#endif
 
 	if (!priv->keys[button][0])
 		return;
@@ -606,9 +606,7 @@ wcmSendNonPadEvents(InputInfoPtr pInfo, const WacomDeviceState *ds,
 
 void wcmSendEvents(InputInfoPtr pInfo, const WacomDeviceState* ds)
 {
-#ifdef DEBUG
 	int is_button = !!(ds->buttons);
-#endif
 	int type = ds->device_type;
 	int id = ds->device_id;
 	unsigned int serial = ds->serial_num;
