@@ -632,7 +632,7 @@ int usbWcmGetRanges(InputInfoPtr pInfo)
 				(int)(((double)priv->maxX * 100000.0
 				 / (double)absinfo.maximum) + 0.5);
 		else
-			common->wcmMaxStripX = absinfo.maximum;
+			priv->maxX = absinfo.maximum;
 	}
 
 	/* X tilt range */
@@ -721,7 +721,7 @@ int usbWcmGetRanges(InputInfoPtr pInfo)
 				 (int)(((double)priv->maxY * 100000.0
 				 / (double)absinfo.maximum) + 0.5);
 		else
-			common->wcmMaxStripY = absinfo.maximum;
+			priv->maxY = absinfo.maximum;
 	}
 
 	/* max z cannot be configured */

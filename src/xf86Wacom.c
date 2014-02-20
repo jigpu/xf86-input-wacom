@@ -219,7 +219,7 @@ static int wcmInitAxes(DeviceIntPtr pWcm)
 	}
 	else if (IsPad(priv) && TabletHasFeature(common, WCM_STRIP))
 	{ /* XXX: what is this axis label? */
-		max = common->wcmMaxStripX;
+		max = priv->maxX;
 	}
 
 	wcmInitAxis(pInfo->dev, index, label, min, max, res, min_res, max_res, mode);
@@ -248,7 +248,7 @@ static int wcmInitAxes(DeviceIntPtr pWcm)
 	}
 	else if (IsPad(priv) && TabletHasFeature(common, WCM_STRIP))
 	{ /* XXX: what is this axis label? */
-		max = common->wcmMaxStripY;
+		max = priv->maxY;
 	}
 
 	wcmInitAxis(pInfo->dev, index, label, min, max, res, min_res, max_res, mode);

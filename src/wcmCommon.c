@@ -1427,8 +1427,6 @@ WacomCommonPtr wcmNewCommon(void)
 	common->wcmGestureParameters.wcmScrollDirection = 0;
 	common->wcmGestureParameters.wcmTapTime = 250;
 	common->wcmRotate = ROTATE_NONE;   /* default tablet rotation to off */
-	common->wcmMaxStripX = 4096;       /* Max fingerstrip X */
-	common->wcmMaxStripY = 4096;       /* Max fingerstrip Y */
 	common->wcmCursorProxoutDistDefault = PROXOUT_INTUOS_DISTANCE;
 			/* default to Intuos */
 	common->wcmSuppress = DEFAULT_SUPPRESS;
