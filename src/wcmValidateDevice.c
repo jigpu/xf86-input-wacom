@@ -1030,9 +1030,9 @@ Bool wcmPostInitParseOptions(InputInfoPtr pInfo, Bool is_primary,
 	/* 2FG touch device */
 	if (TabletHasFeature(common, WCM_2FGT) && IsTouch(priv))
 	{
-		int zoom_distance = common->wcmMaxTouchX *
+		int zoom_distance = priv->maxX *
 			(WCM_BAMBOO3_ZOOM_DISTANCE / WCM_BAMBOO3_MAXX);
-		int scroll_distance = common->wcmMaxTouchX *
+		int scroll_distance = priv->maxX *
 			(WCM_BAMBOO3_SCROLL_DISTANCE / WCM_BAMBOO3_MAXX);
 
 		common->wcmGestureParameters.wcmZoomDistance =
@@ -1044,7 +1044,7 @@ Bool wcmPostInitParseOptions(InputInfoPtr pInfo, Bool is_primary,
 					 scroll_distance);
 
 		common->wcmGestureParameters.wcmMaxScrollFingerSpread =
-			common->wcmMaxTouchX *
+			priv->maxX *
 			(WCM_BAMBOO3_SCROLL_SPREAD_DISTANCE / WCM_BAMBOO3_MAXX);
 	}
 

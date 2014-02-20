@@ -104,8 +104,6 @@ wcmInitialToolSize(InputInfoPtr pInfo)
 	 * the configuration stage */
 	if (IsTouch(priv))
 	{
-		priv->maxX = common->wcmMaxTouchX;
-		priv->maxY = common->wcmMaxTouchY;
 		priv->resolX = common->wcmTouchResolX;
 		priv->resolY = common->wcmTouchResolY;
 	}

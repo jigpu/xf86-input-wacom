@@ -1342,7 +1342,7 @@ int wcmInitTablet(InputInfoPtr pInfo, const char* id, float version)
 		xf86Msg(X_PROBED, "%s: maxX=%d maxY=%d maxZ=%d "
 			"resX=%d resY=%d \n",
 			pInfo->name,
-			common->wcmMaxTouchX, common->wcmMaxTouchY,
+			priv->maxX, priv->maxY,
 			common->wcmMaxZ,
 			common->wcmTouchResolX, common->wcmTouchResolY);
 
@@ -1427,8 +1427,6 @@ WacomCommonPtr wcmNewCommon(void)
 	common->wcmGestureParameters.wcmScrollDirection = 0;
 	common->wcmGestureParameters.wcmTapTime = 250;
 	common->wcmRotate = ROTATE_NONE;   /* default tablet rotation to off */
-	common->wcmMaxTouchX = 1024;       /* max touch X value */
-	common->wcmMaxTouchY = 1024;       /* max touch Y value */
 	common->wcmMaxStripX = 4096;       /* Max fingerstrip X */
 	common->wcmMaxStripY = 4096;       /* Max fingerstrip Y */
 	common->wcmCursorProxoutDistDefault = PROXOUT_INTUOS_DISTANCE;

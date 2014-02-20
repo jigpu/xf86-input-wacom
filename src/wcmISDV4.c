@@ -514,11 +514,11 @@ static int isdv4GetRanges(InputInfoPtr pInfo)
 		/* don't overwrite the default */
 		if (reply.x_max | reply.y_max)
 		{
-			common->wcmMaxTouchX = reply.x_max;
-			common->wcmMaxTouchY = reply.y_max;
+			priv->maxX = reply.x_max;
+			priv->maxY = reply.y_max;
 		}
 		else if (reply.panel_resolution)
-			common->wcmMaxTouchX = common->wcmMaxTouchY =
+			priv->maxX = priv->maxY =
 				(1 << reply.panel_resolution);
 
 		if (reply.panel_resolution)
@@ -529,8 +529,8 @@ static int isdv4GetRanges(InputInfoPtr pInfo)
 
 		DBG(2, priv, "touch speed=%d "
 			"maxTouchX=%d maxTouchY=%d TouchresX=%d TouchresY=%d \n",
-			isdv4data->baudrate, common->wcmMaxTouchX,
-			common->wcmMaxTouchY, common->wcmTouchResolX,
+			isdv4data->baudrate, priv->maxX,
+			priv->maxY, common->wcmTouchResolX,
 			common->wcmTouchResolY);
 	}
 

@@ -276,8 +276,8 @@ test_initial_size(void)
 	priv.flags = TOUCH_ID;
 	assert(IsTouch(&priv));
 
-	common.wcmMaxTouchX = maxx;
-	common.wcmMaxTouchY = maxy;
+	priv.maxX = maxx;
+	priv.maxY = maxy;
 	common.wcmTouchResolX = xres;
 	common.wcmTouchResolY = yres;
 

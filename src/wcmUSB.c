@@ -581,7 +581,7 @@ int usbWcmGetRanges(InputInfoPtr pInfo)
 	}
 	else
 	{
-		common->wcmMaxTouchX = absinfo.maximum;
+		priv->maxX = absinfo.maximum;
 
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,30)
 		if (absinfo.resolution > 0)
@@ -614,7 +614,7 @@ int usbWcmGetRanges(InputInfoPtr pInfo)
 	}
 	else
 	{
-		common->wcmMaxTouchY = absinfo.maximum;
+		priv->maxY = absinfo.maximum;
 
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,30)
 		if (absinfo.resolution > 0)
@@ -629,7 +629,7 @@ int usbWcmGetRanges(InputInfoPtr pInfo)
 	{
 		if (is_touch)
 			common->wcmTouchResolX =
-				(int)(((double)common->wcmMaxTouchX * 100000.0
+				(int)(((double)priv->maxX * 100000.0
 				 / (double)absinfo.maximum) + 0.5);
 		else
 			common->wcmMaxStripX = absinfo.maximum;
@@ -718,7 +718,7 @@ int usbWcmGetRanges(InputInfoPtr pInfo)
 	{
 		if (is_touch)
 			common->wcmTouchResolY =
-				 (int)(((double)common->wcmMaxTouchY * 100000.0
+				 (int)(((double)priv->maxY * 100000.0
 				 / (double)absinfo.maximum) + 0.5);
 		else
 			common->wcmMaxStripY = absinfo.maximum;
