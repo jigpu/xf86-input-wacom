@@ -1335,7 +1335,7 @@ int wcmInitTablet(InputInfoPtr pInfo, const char* id, float version)
 		xf86Msg(X_PROBED, "%s: maxX=%d maxY=%d maxZ=%d "
 			"resX=%d resY=%d  tilt=%s\n",
 			pInfo->name,
-			common->wcmMaxX, common->wcmMaxY, common->wcmMaxZ,
+			priv->maxX, priv->maxY, common->wcmMaxZ,
 			common->wcmResolX, common->wcmResolY,
 			HANDLE_TILT(common) ? "enabled" : "disabled");
 	else if (IsTouch(priv))
@@ -1427,8 +1427,6 @@ WacomCommonPtr wcmNewCommon(void)
 	common->wcmGestureParameters.wcmScrollDirection = 0;
 	common->wcmGestureParameters.wcmTapTime = 250;
 	common->wcmRotate = ROTATE_NONE;   /* default tablet rotation to off */
-	common->wcmMaxX = 0;               /* max digitizer logical X value */
-	common->wcmMaxY = 0;               /* max digitizer logical Y value */
 	common->wcmMaxTouchX = 1024;       /* max touch X value */
 	common->wcmMaxTouchY = 1024;       /* max touch Y value */
 	common->wcmMaxStripX = 4096;       /* Max fingerstrip X */

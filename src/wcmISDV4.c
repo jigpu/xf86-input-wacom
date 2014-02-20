@@ -401,8 +401,8 @@ static int isdv4GetRanges(InputInfoPtr pInfo)
 
 		/* transducer data */
 		common->wcmMaxZ = reply.pressure_max;
-		common->wcmMaxX = reply.x_max;
-		common->wcmMaxY = reply.y_max;
+		priv->maxX = reply.x_max;
+		priv->maxY = reply.y_max;
 		if (reply.tilt_x_max && reply.tilt_y_max)
 		{
 			common->wcmTiltOffX = 0 - reply.tilt_x_max / 2;
@@ -423,12 +423,12 @@ static int isdv4GetRanges(InputInfoPtr pInfo)
 		common->wcmVersion = reply.version;
 
 		/* default to no pen 2FGT if size is undefined */
-		if (!common->wcmMaxX || !common->wcmMaxY)
+		if (!priv->maxX || !priv->maxY)
 			common->tablet_id = 0xE2;
 
 		DBG(2, priv, "Pen speed=%d "
 			"maxX=%d maxY=%d maxZ=%d resX=%d resY=%d \n",
-			isdv4data->baudrate, common->wcmMaxX, common->wcmMaxY,
+			isdv4data->baudrate, priv->maxX, priv->maxY,
 			common->wcmMaxZ, common->wcmResolX, common->wcmResolY);
 	}
 

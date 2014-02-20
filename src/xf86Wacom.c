@@ -111,8 +111,6 @@ wcmInitialToolSize(InputInfoPtr pInfo)
 	}
 	else
 	{
-		priv->maxX = common->wcmMaxX;
-		priv->maxY = common->wcmMaxY;
 		priv->resolX = common->wcmResolX;
 		priv->resolY = common->wcmResolY;
 	}

@@ -256,8 +256,8 @@ test_initial_size(void)
 	 * with non-zero devices */
 	minx = miny = 0;
 
-	common.wcmMaxX = maxx;
-	common.wcmMaxY = maxy;
+	priv.maxX = maxx;
+	priv.maxY = maxy;
 	common.wcmResolX = xres;
 	common.wcmResolY = yres;
 

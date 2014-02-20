@@ -396,8 +396,6 @@ struct _WacomCommonRec
 	int wcmHWTouchSwitchState;   /* touch event disable/enabled by hardware switch */
 
 	/* These values are in tablet coordinates */
-	int wcmMaxX;                 /* tablet max X value */
-	int wcmMaxY;                 /* tablet max Y value */
 	int wcmMaxZ;                 /* tablet max Z value */
 	int wcmMaxTouchX;            /* touch panel max X value */
 	int wcmMaxTouchY;            /* touch panel max Y value */
