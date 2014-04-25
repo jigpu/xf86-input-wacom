@@ -1318,6 +1318,17 @@ int wcmInitTablet(InputInfoPtr pInfo, const char* id, float version)
 	if (model->GetRanges && (model->GetRanges(pInfo) != Success))
 		return !Success;
 	
+	if (priv->maxX == 0 && priv->maxY == 0) {
+		if (IsTouch(priv)) {
+			priv->maxX = 1024;
+			priv->maxY = 1024;
+		}
+		else if (IsPad(priv)) {
+			priv->maxX = 4096;
+			priv->maxY = 4096;
+		}
+	}
+
 	/* Default threshold value if not set */
 	if (common->wcmThreshold <= 0 && IsPen(priv))
 	{

@@ -570,7 +570,7 @@ int usbWcmGetRanges(InputInfoPtr pInfo)
 		return !Success;
 	}
 
-	if (!is_touch)
+	if (!is_touch && !IsPad(priv))
 	{
 		priv->maxX = absinfo.maximum;
 
@@ -603,7 +603,7 @@ int usbWcmGetRanges(InputInfoPtr pInfo)
 		return !Success;
 	}
 
-	if (!is_touch)
+	if (!is_touch && !IsPad(priv))
 	{
 		priv->maxY = absinfo.maximum;
 
@@ -631,7 +631,7 @@ int usbWcmGetRanges(InputInfoPtr pInfo)
 			common->wcmTouchResolX =
 				(int)(((double)priv->maxX * 100000.0
 				 / (double)absinfo.maximum) + 0.5);
-		else
+		else if (IsPad(priv))
 			priv->maxX = absinfo.maximum;
 	}
 
@@ -720,7 +720,7 @@ int usbWcmGetRanges(InputInfoPtr pInfo)
 			common->wcmTouchResolY =
 				 (int)(((double)priv->maxY * 100000.0
 				 / (double)absinfo.maximum) + 0.5);
-		else
+		else if (IsPad(priv))
 			priv->maxY = absinfo.maximum;
 	}
 

@@ -380,7 +380,7 @@ static int isdv4GetRanges(InputInfoPtr pInfo)
 
 	}
 
-	if (ret == Success)
+	if (ret == Success && IsTablet(priv))
 	{
 		ISDV4QueryReply reply;
 		int rc;
@@ -434,7 +434,8 @@ static int isdv4GetRanges(InputInfoPtr pInfo)
 
 	/* Touch might be supported. Send a touch query command */
 	if (isdv4data->baudrate == 38400 &&
-	    isdv4Query(pInfo, ISDV4_TOUCH_QUERY, data) == Success)
+	    isdv4Query(pInfo, ISDV4_TOUCH_QUERY, data) == Success &&
+	    IsTouch(priv))
 	{
 		ISDV4TouchQueryReply reply;
 		int rc;

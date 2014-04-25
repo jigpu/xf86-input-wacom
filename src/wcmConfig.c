@@ -68,6 +68,9 @@ static int wcmAllocate(InputInfoPtr pInfo)
 	priv->nPressCtrl [2] = 100;  /* pressure curve x1 */
 	priv->nPressCtrl [3] = 100;  /* pressure curve y1 */
 
+	priv->maxX = 0;
+	priv->maxY = 0;
+
 	/* Default button and expresskey values, offset buttons 4 and higher
 	 * by the 4 scroll buttons. */
 	for (i=0; i<WCM_MAX_BUTTONS; i++)

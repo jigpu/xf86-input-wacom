@@ -419,9 +419,6 @@ struct _WacomCommonRec
 	int wcmTiltMaxX;	     /* styli max reported tilt in X direction */
 	int wcmTiltMaxY;	     /* styli max reported tilt in Y direction */
 
-	int wcmMaxStripX;            /* Maximum fingerstrip X */
-	int wcmMaxStripY;            /* Maximum fingerstrip Y */
-
 	WacomDevicePtr wcmDevices;   /* list of devices sharing same port */
 	int wcmPktLength;            /* length of a packet */
 	int wcmProtocolLevel;        /* Wacom Protocol used */
