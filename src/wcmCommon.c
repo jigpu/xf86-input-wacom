@@ -859,6 +859,12 @@ static Bool check_arbitrated_control(InputInfoPtr pInfo, WacomDeviceStatePtr ds)
 		/* Pad may never be the "active" pointer controller */
 		return FALSE;
 	}
+	else if (IsCursor(active) || IsTablet(active)) {
+		// EMR tools may not take control from other EMR tools unless the
+		// "active" device has not generated an event for a short period
+		// of time.
+		return (ds->time - active->oldState.time > 100);
+	}
 	else {
 		/* Pen and cursor events may take control from touch at any time */
 		return !IsTouch(priv);
