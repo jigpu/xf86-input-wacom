@@ -116,7 +116,7 @@ int write_to_tablet(int fd, const char *command)
 	int len = 0;
 
 	do {
-		int l;
+		ssize_t l;
 		l = write(fd, &command[len], strlen(command) - len);
 
 		TRACE("Written '%s'.\n", command);
@@ -180,7 +180,7 @@ int wait_for_tablet(int fd)
 	return 0;
 }
 
-void memdump(const unsigned char *buffer, int len)
+void memdump(const unsigned char *buffer, size_t len)
 {
 	int n = 0;
 	if (!len)
@@ -195,29 +195,29 @@ void memdump(const unsigned char *buffer, int len)
 	TRACE("\n");
 }
 
-int skip_garbage(unsigned char *buffer, size_t len)
+ssize_t skip_garbage(unsigned char *buffer, size_t len)
 {
-	int i;
+	ssize_t i;
 	for (i = 0; i < len; i++)
 		if (buffer[i] & HEADER_BIT)
 			break;
 
 	if (i != 0)
-		TRACE("skipping over %d bytes.\n", (i < len) ? i : -1);
+		TRACE("skipping over %ld bytes.\n", (i < len) ? i : -1);
 
 	return (i < len) ? i : -1;
 }
 
-int read_data(int fd, unsigned char* buffer, int min_len)
+ssize_t read_data(int fd, unsigned char* buffer, size_t min_len)
 {
-	int len = 0;
+	size_t len = 0;
 	int attempts = 10;
-	int skip;
+	ssize_t skip;
 
-	TRACE("Reading %d bytes from device.\n", min_len);
+	TRACE("Reading %ld bytes from device.\n", min_len);
 redo:
 	do {
-		int l = read(fd, &buffer[len], min_len);
+		ssize_t l = read(fd, &buffer[len], min_len);
 
 		if (l == -1) {
 			if (errno != EAGAIN) {
@@ -228,23 +228,23 @@ redo:
 			attempts--;
 			continue;
 		} else {
-			TRACE("read %d bytes in one chunk.\n", l);
+			TRACE("read %ld bytes in one chunk.\n", l);
 			len += l;
 		}
 
 	} while (len < min_len && attempts);
 
 	if (!attempts) {
-		fprintf(stderr, "Only able to read %d bytes.\n", len);
+		fprintf(stderr, "Only able to read %ld bytes.\n", len);
 		memdump(buffer, len);
 		return -1;
 	}
 
-	TRACE("Read %d bytes.\n", len);
+	TRACE("Read %ld bytes.\n", len);
 
 	skip = skip_garbage(buffer, len);
 	if (skip > 0) {
-		TRACE("%d bytes garbage.\n", skip);
+		TRACE("%ld bytes garbage.\n", skip);
 		len -= skip;
 		memmove(buffer, &buffer[skip], len);
 		goto redo;
@@ -252,7 +252,7 @@ redo:
 
 	if (len > min_len)
 	{
-		TRACE("%d bytes unexpected data.\n", (len - min_len));
+		TRACE("%ld bytes unexpected data.\n", (len - min_len));
 		memdump(&buffer[min_len], len - min_len);
 	}
 
@@ -266,7 +266,7 @@ int query_tablet(int fd)
 	ISDV4TouchQueryReply touch;
 
 	unsigned char buffer[ISDV4_PKGLEN_TPCCTL];
-	int len, rc;
+	ssize_t len, rc;
 
 	TRACE("Querying tablet.\n");
 
@@ -289,7 +289,7 @@ int query_tablet(int fd)
 	rc = isdv4ParseQuery(buffer, len, &reply);
 	if (rc <= 0)
 	{
-		fprintf(stderr, "parsing error code %d\n", rc);
+		fprintf(stderr, "parsing error code %ld\n", rc);
 		goto out;
 	}
 
@@ -317,7 +317,7 @@ int query_tablet(int fd)
 		rc = isdv4ParseTouchQuery(buffer, len, &touch);
 		if (rc <= 0)
 		{
-			fprintf(stderr, "touch parsing error code %d\n", rc);
+			fprintf(stderr, "touch parsing error code %ld\n", rc);
 			touch.sensor_id = 0;
 			/* failure to parse touch query is not fatal */
 		} else {
@@ -382,7 +382,7 @@ int parse_pen_packet(unsigned char* buffer)
 int parse_touch_packet(unsigned char* buffer, int packetlength)
 {
 	ISDV4TouchData touchdata;
-	int rc;
+	ssize_t rc;
 
 	rc = isdv4ParseTouchData(buffer, packetlength, packetlength, &touchdata);
 	if (rc <= 0) {
@@ -418,7 +418,8 @@ int event_loop(int fd, int sensor_id)
 	memset(buffer, 0, sizeof(buffer));
 
 	while (1) {
-		int r, garbage = 0;
+		ssize_t r;
+		char garbage = 0;
 		r = read(fd, &buffer[dlen], sizeof(buffer) - dlen);
 
 		if (r == -1) {
@@ -438,7 +439,7 @@ int event_loop(int fd, int sensor_id)
 			if (buffer[0] & TOUCH_CONTROL_BIT)
 				packetlength = ISDV4PacketLengths[sensor_id];
 		} else {
-			int bytes = skip_garbage(buffer, dlen);
+			ssize_t bytes = skip_garbage(buffer, dlen);
 			if (bytes > 0) {
 				dlen -= bytes;
 				memmove(buffer, &buffer[bytes], sizeof(buffer) - bytes);
@@ -468,7 +469,7 @@ int event_loop(int fd, int sensor_id)
 		}
 
 		if (garbage) {
-			int bytes;
+			ssize_t bytes;
 			bytes = skip_garbage(buffer, packetlength);
 			if (bytes > 0) {
 				dlen -= bytes;

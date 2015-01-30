@@ -157,7 +157,7 @@ static inline int isdv4ParseTouchQuery(const unsigned char *buffer, const size_t
 }
 
 /* pktlen defines what touch type we parse */
-static inline int isdv4ParseTouchData(const unsigned char *buffer, const size_t buff_len,
+static inline size_t isdv4ParseTouchData(const unsigned char *buffer, const size_t buff_len,
 				      const size_t pktlen, ISDV4TouchData *touchdata)
 {
 	int header, touch;
