@@ -53,12 +53,15 @@ XPROTOS="xproto xext kbproto inputproto randrproto"
 
 # Obtain compiler/linker options from server and required extensions
 PKG_CHECK_MODULES(XORG, [xorg-server >= 1.7.0] $XPROTOS)
+XORG_CFLAGS=`echo $XORG_CFLAGS | sed 's/-I/-isystem/'`
 
 # Obtain compiler/linker options for the xsetwacom tool
 PKG_CHECK_MODULES(X11, x11 xi xrandr xinerama $XPROTOS)
+X11_CFLAGS=`echo $X11_CFLAGS | sed 's/-I/-isystem/'`
 
 # Obtain compiler/linker options for libudev used by ISDV4 code
 PKG_CHECK_MODULES(UDEV, libudev)
+UDEV_CFLAGS=`echo $UDEV_CFLAGS | sed 's/-I/-isystem/'`
 
 # X Server SDK location is required to install wacom header files
 # This location is also relayed in the xorg-wacom.pc file
