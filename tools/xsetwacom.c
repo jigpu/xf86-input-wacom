@@ -40,6 +40,8 @@
 #include <X11/extensions/Xinerama.h>
 #include <X11/XKBlib.h>
 
+#define UNUSED __attribute__((__unused__))
+
 #define TRACE(...) \
 	if (verbose) fprintf(stderr, "... " __VA_ARGS__)
 
@@ -914,7 +916,7 @@ static void list_devices(Display *dpy)
 }
 
 
-static void list_param(Display *dpy)
+static void list_param(Display *dpy UNUSED)
 {
 	param_t *param = parameters;
 
@@ -925,7 +927,7 @@ static void list_param(Display *dpy)
 	}
 }
 
-static void list_mod(Display *dpy)
+static void list_mod(Display *dpy UNUSED)
 {
 	struct modifier *m = modifiers;
 
@@ -1021,7 +1023,8 @@ static struct keywords {
 
 /* the "core" keyword isn't supported anymore, we just have this here to
    tell people that. */
-static int special_map_core(Display *dpy, int argc, char **argv, unsigned long *ndata, unsigned long *data, const size_t size)
+static int special_map_core(Display *dpy UNUSED, int argc UNUSED, char **argv UNUSED,
+	unsigned long *ndata UNUSED, unsigned long *data UNUSED, const size_t size UNUSED)
 {
 	static int once_only = 1;
 	if (once_only)
@@ -1033,7 +1036,8 @@ static int special_map_core(Display *dpy, int argc, char **argv, unsigned long *
 	return 0;
 }
 
-static int special_map_modetoggle(Display *dpy, int argc, char **argv, unsigned long *ndata, unsigned long *data, const size_t size)
+static int special_map_modetoggle(Display *dpy UNUSED, int argc UNUSED, char **argv UNUSED,
+	unsigned long *ndata, unsigned long *data, const size_t size)
 {
 	if (*ndata + 1 > size) {
 		fprintf(stderr, "Insufficient space to store all commands.\n");
@@ -1048,7 +1052,8 @@ static int special_map_modetoggle(Display *dpy, int argc, char **argv, unsigned 
 
 /* the "displaytoggle" keyword isn't supported anymore, we just have this
    here to tell people that. */
-static int special_map_displaytoggle(Display *dpy, int argc, char **argv, unsigned long *ndata, unsigned long *data, const size_t size)
+static int special_map_displaytoggle(Display *dpy UNUSED, int argc UNUSED, char **argv UNUSED,
+	unsigned long *ndata UNUSED, unsigned long *data UNUSED, const size_t size UNUSED)
 {
 	static int once_only = 1;
 	if (once_only)
@@ -1073,7 +1078,8 @@ static inline int is_valid_keyword(const char *keyword)
 	return 0;
 }
 
-static int special_map_button(Display *dpy, int argc, char **argv, unsigned long *ndata, unsigned long *data, const size_t size)
+static int special_map_button(Display *dpy UNUSED, int argc, char **argv,
+	unsigned long *ndata, unsigned long *data, const size_t size)
 {
 	int nitems = 0;
 	int i;
@@ -1830,7 +1836,7 @@ out:
 	free(data);
 }
 
-static void get_mode(Display *dpy, XDevice *dev, param_t* param, int argc, char **argv)
+static void get_mode(Display *dpy, XDevice *dev, param_t* param, int argc UNUSED, char **argv UNUSED)
 {
 	XDeviceInfo *info, *d = NULL;
 	int ndevices, i;
@@ -1867,7 +1873,7 @@ static void get_mode(Display *dpy, XDevice *dev, param_t* param, int argc, char 
 	XFreeDeviceList(info);
 }
 
-static void get_rotate(Display *dpy, XDevice *dev, param_t* param, int argc, char **argv)
+static void get_rotate(Display *dpy, XDevice *dev, param_t* param, int argc, char **argv UNUSED)
 {
 	const char *rotation = NULL;
 	Atom prop, type;
