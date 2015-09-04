@@ -438,17 +438,22 @@ static void sendCommonEvents(InputInfoPtr pInfo, const WacomDeviceState* ds,
 		sendWheelStripEvents(pInfo, ds, first_val, num_vals, valuators);
 }
 
-static double wcmBorderDistortionCorrection(double coord, float border, float* polynomial)
+static double wcmBorderDistortionCorrection(WacomDevicePtr priv, double coord, float border, float* polynomial, size_t n)
 {
+	if (!polynomial)
+		return coord;
 	if (coord < border) {
 		double x = coord;
-		coord  = polynomial[0];
-		coord *= x;
-		coord += polynomial[1]; // I wonder if double+float is slower than double+double
-		coord *= x;
-		coord += polynomial[2];
-		coord *= x;
-		coord += polynomial[3];
+		size_t i = 0;
+		DBG(-1, priv, "Correcting coord %f...\n", coord);
+		coord = 0;
+		for (i = 0; i < n - 1; i++) {
+			DBG(-1, priv, "Polynomial %d == %f\n", i, polynomial[i]);
+			coord += polynomial[i];
+			coord *= x;
+		}
+		coord += polynomial[n-1];
+		DBG(-1, priv, "Corrected coord is %f\n", coord);
 	}
 	return coord;
 }
@@ -470,9 +475,9 @@ void wcmRotateAndScaleCoordinates(InputInfoPtr pInfo, int* x, int* y)
 	/* Don't try to scale relative axes */
 	if (axis_x->max_value > axis_x->min_value) {
 		f = (*x - priv->topX) / (double)(priv->bottomX - priv->topX);
-		f = wcmBorderDistortionCorrection(f, priv->distortion_topX_border, priv->distortion_topX_poly);
+		f = wcmBorderDistortionCorrection(priv, f, priv->distortion_topX_border, priv->distortion_topX_poly, priv->distortion_topX_poly_len);
 		f = 1.0 - f;
-		f = wcmBorderDistortionCorrection(f, priv->distortion_bottomX_border, priv->distortion_bottomX_poly);
+		f = wcmBorderDistortionCorrection(priv, f, priv->distortion_bottomX_border, priv->distortion_bottomX_poly, priv->distortion_bottomX_poly_len);
 		f = 1.0 - f;
 
 		*x = round(f * (axis_x->max_value - axis_x->min_value) + axis_x->min_value);
@@ -482,9 +487,9 @@ void wcmRotateAndScaleCoordinates(InputInfoPtr pInfo, int* x, int* y)
 	
 	if (axis_y->max_value > axis_y->min_value) {
 		f = (*y - priv->topY) / (double)(priv->bottomY - priv->topY);
-		f = wcmBorderDistortionCorrection(f, priv->distortion_topY_border, priv->distortion_topY_poly);
+		f = wcmBorderDistortionCorrection(priv, f, priv->distortion_topY_border, priv->distortion_topY_poly, priv->distortion_topY_poly_len);
 		f = 1.0 - f;
-		f = wcmBorderDistortionCorrection(f, priv->distortion_bottomY_border, priv->distortion_bottomY_poly);
+		f = wcmBorderDistortionCorrection(priv, f, priv->distortion_bottomY_border, priv->distortion_bottomY_poly, priv->distortion_bottomY_poly_len);
 		f = 1.0 - f;
 
 		*y = round(f * (axis_y->max_value - axis_y->min_value) + axis_y->min_value);

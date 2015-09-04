@@ -719,13 +719,20 @@ int wcmDeleteProperty(DeviceIntPtr dev, Atom property)
 	return (i >= 0) ? BadAccess : Success;
 }
 
-static void setDistortionProperty(float* values, float *border, float *polynomial)
+static void setDistortionProperty(size_t n, float* values, float *border, float **polynomial, size_t *polyN)
 {
+	if (n < 2)
+		return;
+
 	*border       = values[0]; // border width relatively to the screen dimension
-	polynomial[0] = values[1]; // x^3 coefficient of the polynomial
-	polynomial[1] = values[2]; // x^2 coefficient
-	polynomial[2] = values[3]; // x   coefficient
-	polynomial[3] = values[4]; // constant coefficient
+	n--;
+	values++;
+	free(*polynomial);
+	*polynomial = malloc(n * sizeof(float));
+	if (*polynomial) {
+		memcpy(*polynomial, values, n*sizeof(float));
+		*polyN = n;
+	}
 }
 
 int wcmSetProperty(DeviceIntPtr dev, Atom property, XIPropertyValuePtr prop,
@@ -766,15 +773,15 @@ int wcmSetProperty(DeviceIntPtr dev, Atom property, XIPropertyValuePtr prop,
 	{
 		float *values = (float*)prop->data;
 
-		if (prop->size != 20 || prop->format != 32 || prop->type != float_type)
+		if (prop->size <= 4 || prop->size % 4 || prop->format != 32 || prop->type != float_type)
 			return BadValue;
 
 		if (!checkonly)
 		{
-			setDistortionProperty(values,    &priv->distortion_topX_border,    priv->distortion_topX_poly);
-			setDistortionProperty(values+5,  &priv->distortion_topY_border,    priv->distortion_topY_poly);
-			setDistortionProperty(values+10, &priv->distortion_bottomX_border, priv->distortion_bottomX_poly);
-			setDistortionProperty(values+15, &priv->distortion_bottomY_border, priv->distortion_bottomY_poly);
+			setDistortionProperty(prop->size/4, values+(0*prop->size/4), &priv->distortion_topX_border,    &priv->distortion_topX_poly,    &priv->distortion_topX_poly_len);
+			setDistortionProperty(prop->size/4, values+(1*prop->size/4), &priv->distortion_topY_border,    &priv->distortion_topY_poly,    &priv->distortion_topY_poly_len);
+			setDistortionProperty(prop->size/4, values+(2*prop->size/4), &priv->distortion_bottomX_border, &priv->distortion_bottomX_poly, &priv->distortion_bottomX_poly_len);
+			setDistortionProperty(prop->size/4, values+(3*prop->size/4), &priv->distortion_bottomY_border, &priv->distortion_bottomY_poly, &priv->distortion_bottomY_poly_len);
 		}
 	} else if (property == prop_pressurecurve)
 	{
