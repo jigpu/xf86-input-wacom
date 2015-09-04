@@ -438,6 +438,21 @@ static void sendCommonEvents(InputInfoPtr pInfo, const WacomDeviceState* ds,
 		sendWheelStripEvents(pInfo, ds, first_val, num_vals, valuators);
 }
 
+static double wcmBorderDistortionCorrection(double coord, float border, float* polynomial)
+{
+	if (coord < border) {
+		double x = coord;
+		coord  = polynomial[0];
+		coord *= x;
+		coord += polynomial[1]; // I wonder if double+float is slower than double+double
+		coord *= x;
+		coord += polynomial[2];
+		coord *= x;
+		coord += polynomial[3];
+	}
+	return coord;
+}
+
 /* rotate x and y before post X inout events */
 void wcmRotateAndScaleCoordinates(InputInfoPtr pInfo, int* x, int* y)
 {
@@ -446,19 +461,36 @@ void wcmRotateAndScaleCoordinates(InputInfoPtr pInfo, int* x, int* y)
 	DeviceIntPtr dev = pInfo->dev;
 	AxisInfoPtr axis_x, axis_y;
 	int tmp_coord;
+	double f;
 
 	/* scale into on topX/topY area */
 	axis_x = &dev->valuator->axes[0];
 	axis_y = &dev->valuator->axes[1];
 
 	/* Don't try to scale relative axes */
-	if (axis_x->max_value > axis_x->min_value)
-		*x = xf86ScaleAxis(*x, axis_x->max_value, axis_x->min_value,
-				   priv->bottomX, priv->topX);
+	if (axis_x->max_value > axis_x->min_value) {
+		f = (*x - priv->topX) / (double)(priv->bottomX - priv->topX);
+		f = wcmBorderDistortionCorrection(f, priv->distortion_topX_border, priv->distortion_topX_poly);
+		f = 1.0 - f;
+		f = wcmBorderDistortionCorrection(f, priv->distortion_bottomX_border, priv->distortion_bottomX_poly);
+		f = 1.0 - f;
 
-	if (axis_y->max_value > axis_y->min_value)
-		*y = xf86ScaleAxis(*y, axis_y->max_value, axis_y->min_value,
-				   priv->bottomY, priv->topY);
+		*x = round(f * (axis_x->max_value - axis_x->min_value) + axis_x->min_value);
+		if (*x < axis_x->min_value) *x = axis_x->min_value;
+		if (*x > axis_x->max_value) *x = axis_x->max_value;
+	}
+	
+	if (axis_y->max_value > axis_y->min_value) {
+		f = (*y - priv->topY) / (double)(priv->bottomY - priv->topY);
+		f = wcmBorderDistortionCorrection(f, priv->distortion_topY_border, priv->distortion_topY_poly);
+		f = 1.0 - f;
+		f = wcmBorderDistortionCorrection(f, priv->distortion_bottomY_border, priv->distortion_bottomY_poly);
+		f = 1.0 - f;
+
+		*y = round(f * (axis_y->max_value - axis_y->min_value) + axis_y->min_value);
+		if (*y < axis_y->min_value) *y = axis_y->min_value;
+		if (*y > axis_y->max_value) *y = axis_y->max_value;
+	}
 
 	/* coordinates are now in the axis rage we advertise for the device */
 

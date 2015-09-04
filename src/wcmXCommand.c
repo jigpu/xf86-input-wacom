@@ -33,6 +33,12 @@
 #define XI_PROP_PRODUCT_ID "Device Product ID"
 #endif
 
+#ifndef XATOM_FLOAT
+#define XATOM_FLOAT "FLOAT"
+#endif
+
+static Atom float_type;
+
 static void wcmBindToSerial(InputInfoPtr pInfo, unsigned int serial);
 
 /*****************************************************************************
@@ -82,6 +88,7 @@ int wcmDevSwitchMode(ClientPtr client, DeviceIntPtr dev, int mode)
 static Atom prop_devnode;
 static Atom prop_rotation;
 static Atom prop_tablet_area;
+static Atom prop_distortion;
 static Atom prop_pressurecurve;
 static Atom prop_serials;
 static Atom prop_serial_binding;
@@ -204,11 +211,23 @@ static Atom InitWcmAtom(DeviceIntPtr dev, const char *name, Atom type, int forma
 	return atom;
 }
 
+static Atom InitFloatAtom(DeviceIntPtr dev, const char *name, int nvalues, float *values)
+{
+	Atom atom;
+
+	atom = MakeAtom(name, strlen(name), TRUE);
+	XIChangeDeviceProperty(dev, atom, float_type, 32,
+						   PropModeReplace, nvalues, values, FALSE);
+	XISetDevicePropertyDeletable(dev, atom, FALSE);
+	return atom;
+}
+
 void InitWcmDeviceProperties(InputInfoPtr pInfo)
 {
 	WacomDevicePtr priv = (WacomDevicePtr) pInfo->private;
 	WacomCommonPtr common = priv->common;
 	int values[WCM_MAX_BUTTONS];
+	float fvalues[20];
 	int i;
 
 	DBG(10, priv, "\n");
@@ -225,6 +244,23 @@ void InitWcmDeviceProperties(InputInfoPtr pInfo)
 		values[2] = priv->bottomX;
 		values[3] = priv->bottomY;
 		prop_tablet_area = InitWcmAtom(pInfo->dev, WACOM_PROP_TABLET_AREA, XA_INTEGER, 32, 4, values);
+	}
+
+	if (!IsPad(priv)) {
+		float_type = XIGetKnownProperty(XATOM_FLOAT);
+		if (!float_type) float_type = MakeAtom(XATOM_FLOAT, strlen(XATOM_FLOAT), TRUE);
+
+		if (float_type) {
+			// topX, topY, bottomX, bottomY
+			for (i = 0; i < 4; ++i) {
+				fvalues[i*5+0] = 0.0; // border
+				fvalues[i*5+1] = 0.0; // x^3
+				fvalues[i*5+2] = 0.0; // x^2
+				fvalues[i*5+3] = 1.0; // x
+				fvalues[i*5+4] = 0.0; // 1
+			}
+			prop_distortion = InitFloatAtom(pInfo->dev, WACOM_PROP_TABLET_DISTORTION, 20, fvalues);
+		}
 	}
 
 	values[0] = common->wcmRotate;
@@ -683,6 +719,15 @@ int wcmDeleteProperty(DeviceIntPtr dev, Atom property)
 	return (i >= 0) ? BadAccess : Success;
 }
 
+static void setDistortionProperty(float* values, float *border, float *polynomial)
+{
+	*border       = values[0]; // border width relatively to the screen dimension
+	polynomial[0] = values[1]; // x^3 coefficient of the polynomial
+	polynomial[1] = values[2]; // x^2 coefficient
+	polynomial[2] = values[3]; // x   coefficient
+	polynomial[3] = values[4]; // constant coefficient
+}
+
 int wcmSetProperty(DeviceIntPtr dev, Atom property, XIPropertyValuePtr prop,
 		BOOL checkonly)
 {
@@ -716,6 +761,20 @@ int wcmSetProperty(DeviceIntPtr dev, Atom property, XIPropertyValuePtr prop,
 			priv->topY = values[1];
 			priv->bottomX = values[2];
 			priv->bottomY = values[3];
+		}
+	} else if (property == prop_distortion)
+	{
+		float *values = (float*)prop->data;
+
+		if (prop->size != 20 || prop->format != 32 || prop->type != float_type)
+			return BadValue;
+
+		if (!checkonly)
+		{
+			setDistortionProperty(values,    &priv->distortion_topX_border,    priv->distortion_topX_poly);
+			setDistortionProperty(values+5,  &priv->distortion_topY_border,    priv->distortion_topY_poly);
+			setDistortionProperty(values+10, &priv->distortion_bottomX_border, priv->distortion_bottomX_poly);
+			setDistortionProperty(values+15, &priv->distortion_bottomY_border, priv->distortion_bottomY_poly);
 		}
 	} else if (property == prop_pressurecurve)
 	{
