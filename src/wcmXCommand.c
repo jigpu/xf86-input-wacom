@@ -991,8 +991,13 @@ int wcmSetProperty(DeviceIntPtr dev, Atom property, XIPropertyValuePtr prop,
 		if (IsTouch(priv))
 			return BadMatch;
 
-		if (!checkonly)
+		if (!checkonly) {
 			common->wcmPanscrollThreshold = values[0];
+			SetScrollValuator(pInfo->dev, 7, SCROLL_TYPE_HORIZONTAL,
+					  common->wcmPanscrollThreshold, SCROLL_FLAG_NONE);
+			SetScrollValuator(pInfo->dev, 8, SCROLL_TYPE_VERTICAL,
+					  common->wcmPanscrollThreshold, SCROLL_FLAG_PREFERRED);
+		}
 	} else
 	{
 		Atom *handler = NULL;

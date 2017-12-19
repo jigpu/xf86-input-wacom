@@ -304,6 +304,29 @@ static int wcmInitAxes(DeviceIntPtr pWcm)
 		wcmInitAxis(pInfo->dev, index, label, min, max, res, min_res, max_res, mode);
 	}
 
+	if (IsStylus(priv))
+	{
+		index = 7;
+		label = XIGetKnownProperty(AXIS_LABEL_PROP_REL_HSCROLL);
+		mode = Relative;
+		min = NO_AXIS_LIMITS;
+		max = NO_AXIS_LIMITS;
+
+		wcmInitAxis(pInfo->dev, index, label, min, max, 0, 0, 0, mode);
+		SetScrollValuator(pInfo->dev, index, SCROLL_TYPE_HORIZONTAL,
+				  common->wcmPanscrollThreshold, SCROLL_FLAG_NONE);
+
+		index = 8;
+		label = XIGetKnownProperty(AXIS_LABEL_PROP_REL_VSCROLL);
+		mode = Relative;
+		min = NO_AXIS_LIMITS;
+		max = NO_AXIS_LIMITS;
+
+		wcmInitAxis(pInfo->dev, index, label, min, max, 0, 0, 0, mode);
+		SetScrollValuator(pInfo->dev, index, SCROLL_TYPE_VERTICAL,
+				  common->wcmPanscrollThreshold, SCROLL_FLAG_PREFERRED);
+	}
+
 	return TRUE;
 }
 
@@ -332,8 +355,9 @@ static int wcmDevInit(DeviceIntPtr pWcm)
 	nbaxes = priv->naxes;       /* X, Y, Pressure, Tilt-X, Tilt-Y, Wheel */
 	nbbuttons = priv->nbuttons; /* Use actual number of buttons, if possible */
 
-	if (IsPad(priv) && TabletHasFeature(priv->common, WCM_DUALRING))
-		nbaxes = priv->naxes = nbaxes + 1; /* ABS wheel 2 */
+	//if (IsPad(priv) && TabletHasFeature(priv->common, WCM_DUALRING))
+	//	nbaxes = priv->naxes = nbaxes + 1; /* ABS wheel 2 */
+	nbaxes = priv->naxes = 9;
 
 	/* if more than 3 buttons, offset by the four scroll buttons,
 	 * otherwise, alloc 7 buttons for scroll wheel. */
@@ -379,8 +403,8 @@ static int wcmDevInit(DeviceIntPtr pWcm)
 			return FALSE;
 	}
 
-	if (!nbaxes || nbaxes > 7)
-		nbaxes = priv->naxes = 7;
+	if (!nbaxes || nbaxes > 9)
+		nbaxes = priv->naxes = 9;
 
 	/* axis_labels is just zeros, we set up each valuator with the
 	 * correct property later */
