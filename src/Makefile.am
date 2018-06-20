@@ -26,12 +26,14 @@
 # TODO: -nostdlib/-Bstatic/-lgcc platform magic, not installing the .a, etc.
 
 include common.mk
+include $(top_srcdir)/aminclude_static.am
 
 @DRIVER_NAME@_drv_la_LTLIBRARIES = @DRIVER_NAME@_drv.la
 @DRIVER_NAME@_drv_la_LDFLAGS = -module -avoid-version
 @DRIVER_NAME@_drv_ladir = @inputdir@
 
 AM_CPPFLAGS=-I$(top_srcdir)/include/
-AM_CFLAGS = $(XORG_CFLAGS) $(CWARNFLAGS) $(UDEV_CFLAGS)
+AM_CFLAGS = $(XORG_CFLAGS) $(CWARNFLAGS) $(UDEV_CFLAGS) $(CODE_COVERAGE_CFLAGS)
+AM_LDFLAGS= $(CODE_COVERAGE_LDFLAGS)
 
 @DRIVER_NAME@_drv_la_SOURCES = $(DRIVER_SOURCES)

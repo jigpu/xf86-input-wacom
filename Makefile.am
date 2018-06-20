@@ -18,6 +18,8 @@
 #  IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 #  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+include $(top_srcdir)/aminclude_static.am
+
 # Provide an sdk location that is known to be writable
 DISTCHECK_CONFIGURE_FLAGS = --with-sdkdir='$${includedir}/xorg' \
 			    --with-xorg-conf-dir='$${datadir}/X11/xorg.conf.d'

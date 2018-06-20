@@ -14,9 +14,12 @@ addons:
       - libxrandr-dev
       - libxinerama-dev
       - libudev-dev
+      - autoconf-archive
+      - lcov
 
 before_install:
   - echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
+  - mkdir m4 && curl "http://git.savannah.gnu.org/gitweb/?p=autoconf-archive.git;a=blob_plain;f=m4/ax_code_coverage.m4" > m4/ax_code_coverage.m4
 
 env:
   global:
@@ -34,9 +37,12 @@ before_script:
   # flags to `make` instead. Not doing so results in an incorrect config:
   # 'checking for rint in -lm... no' because of a builtin-declaration-mismatch
   # warning (error) in the auto-generated feature test.
-  - CFLAGS="" ./autogen.sh
+  - CFLAGS="" ./autogen.sh --enable-code-coverage
 
 script:
   - if [[ x"$TRAVIS_EVENT_TYPE" = "xcron" ]]; then export DO_COVERITY="YES"; fi
   - if [[ x"$BUILDTYPE" = "xcoverity" && x"$DO_COVERITY" = "xYES" ]]; then COVERITY_SCRIPT=$(curl -fs "$COVERITY_URL") && echo "$COVERITY_SCRIPT" | bash; fi
   - if [[ x"$BUILDTYPE" != "xcoverity" ]]; then make CFLAGS="$CFLAGS" && make check; fi
+
+after_success:
+  - if [[ x"$BUILDTYPE" != "xcoverity" ]]; then bash <(curl -s https://codecov.io/bash); fi
