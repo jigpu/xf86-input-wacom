@@ -1049,7 +1049,7 @@ error:
 #define WCM_DEFAULT_MM_YRES           (44.5 * 1000)
 #define WCM_ZOOM_DISTANCE_MM          6.5
 #define WCM_SCROLL_DISTANCE_MM        1.8
-#define WCM_SCROLL_SPREAD_DISTANCE_MM 12.6
+#define WCM_SCROLL_SPREAD_DISTANCE_MM 6.5
 
 /**
  * Parse post-init options for this device. Useful for overriding HW
