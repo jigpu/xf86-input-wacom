@@ -99,6 +99,28 @@ static void getStateHistory(WacomCommonPtr common, WacomDeviceState states[], in
 }
 
 /**
+ * Count the number of touches currently in contact with the device.
+ *
+ * @param[in] common
+ * @return Number of touches currently in contact
+ */
+static int countTouches(WacomCommonPtr common) {
+	int count = 0;
+	int i;
+
+	for (i = 0; i < MAX_CHANNELS; i++)
+	{
+		WacomChannelPtr channel = common->wcmChannel+i;
+		WacomDeviceState state  = channel->valid.state;
+
+		if (state.device_type == TOUCH_ID && state.proximity)
+			count++;
+	}
+
+	return count;
+}
+
+/**
  * Send a touch event for the provided contact ID. This makes use of
  * the multitouch API available in XI2.2.
  *
@@ -404,6 +426,7 @@ void wcmGestureFilter(WacomDevicePtr priv, int touch_id)
 {
 	WacomCommonPtr common = priv->common;
 	WacomDeviceState ds[2] = {}, dsLast[2] = {};
+	int numTouches = countTouches(common);
 
 	getStateHistory(common, ds, ARRAY_SIZE(ds), 0);
 	getStateHistory(common, dsLast, ARRAY_SIZE(dsLast), 1);
@@ -419,23 +442,22 @@ void wcmGestureFilter(WacomDevicePtr priv, int touch_id)
 	}
 
 	/* Send multitouch data to X if appropriate */
-	if (!common->wcmGesture) {
+	if (!common->wcmGesture || numTouches > 2 || common->wcmGestureMode == GESTURE_MULTITOUCH_MODE) {
 		switch (common->wcmGestureMode) {
 		case GESTURE_CANCEL_MODE:
 			break;
+		default:
+			wcmCancelGesture(priv->pInfo);
 		case GESTURE_NONE_MODE:
-			if (TabletHasFeature(common, WCM_LCD))
-				common->wcmGestureMode = GESTURE_MULTITOUCH_MODE;
-			else if (ds[1].proximity)
+			if ((!common->wcmGesture && numTouches > 1) || numTouches > 2)
 				common->wcmGestureMode = GESTURE_LAG_MODE;
+			else if (TabletHasFeature(common, WCM_LCD))
+				common->wcmGestureMode = GESTURE_MULTITOUCH_MODE;
 			/* fall through */
 		case GESTURE_LAG_MODE:
 		case GESTURE_MULTITOUCH_MODE:
 			if (common->wcmGestureMode != GESTURE_NONE_MODE)
 				wcmFingerMultitouch(priv, touch_id);
-			break;
-		default:
-			wcmCancelGesture(priv->pInfo);
 			break;
 		}
 	}
